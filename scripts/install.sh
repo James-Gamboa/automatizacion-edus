@@ -15,12 +15,17 @@ if [[ ! -f .env ]]; then
   echo "Created .env from .env.example — fill EDUS_CEDULA and EDUS_CLAVE."
 fi
 
-# Optional OCR (Debian/Ubuntu)
-if command -v apt-get >/dev/null 2>&1; then
-  if ! command -v tesseract >/dev/null 2>&1; then
-    echo "Tip: sudo apt-get install -y tesseract-ocr tesseract-ocr-spa"
+# Optional OCR tips
+if ! command -v tesseract >/dev/null 2>&1; then
+  if command -v brew >/dev/null 2>&1; then
+    echo "Tip (macOS): brew install tesseract tesseract-lang"
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo "Tip (Debian/Ubuntu): sudo apt-get install -y tesseract-ocr tesseract-ocr-spa"
+  else
+    echo "Tip: install Tesseract OCR and ensure 'tesseract' is on PATH."
   fi
 fi
 
 python3 scripts/edus_cli.py validate
-echo "Done."
+echo "Done. Next: edit .env, then:"
+echo "  python3 scripts/edus_cli.py book --specialty medicina_general --force --dry-run"

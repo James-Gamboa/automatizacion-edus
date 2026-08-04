@@ -1,127 +1,188 @@
 # EDUS Citas Automation (CCSS Costa Rica)
 
-Production-ready Playwright automation + Cursor agent skill to monitor and book appointments on **EDUS Citas Web**, following the [official automation guide](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss/blob/main/EDUS-Citas-Automation-Guide.md).
+Automates login, CAPTCHA, and appointment booking on **EDUS Citas Web** (`https://edus.ccss.sa.cr/eduscitasweb/`), following the official guide:
 
-A local copy of that guide lives in this repo: [`EDUS-Citas-Automation-Guide.md`](EDUS-Citas-Automation-Guide.md).
+- Upstream: [automatizacion-citas-edus-ccss](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss)
+- Guide: [EDUS-Citas-Automation-Guide.md](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss/blob/main/EDUS-Citas-Automation-Guide.md)
+- Local copy in this repo: [`EDUS-Citas-Automation-Guide.md`](EDUS-Citas-Automation-Guide.md)
 
-Official upstream reference (optional local clone):
+This repo is the **ready-to-run implementation** of that guide (Playwright + CLI). You do not need to rebuild the flow from scratch.
 
-```powershell
+Optional upstream clone (gitignored under `vendor/`):
+
+```bash
 git clone https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss.git vendor/automatizacion-citas-edus-ccss
 ```
 
-(`vendor/` is gitignored — clone it locally if you want the upstream copy.)
+---
 
-### Agent skills (in this repo)
+## Just install and run
 
-| Skill | `.agents/skills` | `.claude/skills` |
-|-------|------------------|------------------|
-| `edus-citas` (executable booking) | yes | yes |
-| `edus-citas-automation-guide` (official guide) | yes | yes |
+If you only want to install dependencies and run the automation, use the section for your OS. Then put your cédula and password in `.env` (`EDUS_CEDULA`, `EDUS_CLAVE`). Never commit `.env`.
 
-## What it does
+### macOS
 
-- Logs in with cédula + password + CAPTCHA OCR (Tesseract, retry loop)
-- Opens “Agregar una cita” (titular or grupo familiar)
-- Selects **Medicina General** or **Odontología**
-- Reads available cupos, filters excluded dates and the allowed time window
-- Reserves and confirms the first valid slot
-- Writes a structured result + rotating logs
-- Supports silent watchdog mode for Task Scheduler / cron
+```bash
+cd /path/to/automatizacion-edus
+chmod +x scripts/install.sh
+./scripts/install.sh
+# Edit .env → EDUS_CEDULA and EDUS_CLAVE
+brew install tesseract tesseract-lang   # if install.sh warned about OCR
+python3 scripts/edus_cli.py book --specialty medicina_general --force --dry-run
+```
 
-## Quick start (Windows)
+Real booking (after dry-run looks good):
+
+```bash
+python3 scripts/edus_cli.py book --specialty medicina_general --force
+# or: python3 scripts/edus_cli.py book --specialty odontologia --force
+```
+
+### Windows (PowerShell)
 
 ```powershell
-cd C:\Users\jjgue\automatizacion-edus
+cd C:\path\to\automatizacion-edus
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1
-copy .env.example .env   # if install did not create it
-# Edit .env → set EDUS_CEDULA and EDUS_CLAVE (never commit .env)
-python scripts\edus_cli.py validate
+# Edit .env → EDUS_CEDULA and EDUS_CLAVE
+# Install Tesseract if needed: winget install --id UB-Mannheim.TesseractOCR -e
 python scripts\edus_cli.py book --specialty medicina_general --force --dry-run
 ```
 
-Install [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) for Windows and, if needed, set `TESSERACT_CMD` in `.env`.
+Real booking:
 
-## Agent skill usage
+```powershell
+python scripts\edus_cli.py book --specialty medicina_general --force
+```
 
-The skill lives at `.agents/skills/edus-citas/SKILL.md`. In Cursor, say:
+Prefer the project venv if you created one:
 
-- “Use el skill de citas EDUS y sáqueme una cita de medicina general.”
-- “Use el skill de citas EDUS y sáqueme una cita de odontología.”
-- “Revise si hay citas disponibles.”
-- “¿Cuál fue el resultado de la última ejecución?”
-- “Inicie el monitoreo automático.”
+```powershell
+.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty medicina_general --force --dry-run
+```
 
-The agent runs `scripts/edus_cli.py` — you do not need to click through EDUS manually.
+### Linux
 
-## CLI
+```bash
+cd /path/to/automatizacion-edus
+chmod +x scripts/install.sh
+./scripts/install.sh
+# Edit .env → EDUS_CEDULA and EDUS_CLAVE
+# Tip: sudo apt-get install -y tesseract-ocr tesseract-ocr-spa
+python3 scripts/edus_cli.py book --specialty medicina_general --force --dry-run
+```
+
+---
+
+## What the guide covers (and what this repo does)
+
+| Guide phase | What it means | In this repo |
+|-------------|----------------|--------------|
+| Phase 1 — Reconocimiento | Public health-center listing without login | `edus/centros.py` |
+| Phase 2 — Login + CAPTCHA | HTTP CAPTCHA download + OCR retries | `edus/login.py`, `edus/captcha.py` |
+| Phase 3 — Reserva | Servicio → Especialidad → cupos → confirmar | `edus/booking.py` |
+| Phase 4 — Familiar | Book for a family member under the titular | `edus/familiar.py` |
+| Phase 5 — Watchdog | Silent monitor when no slots / outside window | `edus/watchdog.py`, schedule scripts |
+
+Typical EDUS flow this CLI follows:
+
+1. Login (cédula + clave + CAPTCHA OCR)
+2. Agregar una cita
+3. **Servicio** first: `MEDICINA` or `ODONTOLOGIA`
+4. **Especialidad**: `MEDICINA GENERAL` or `ODONTOLOGIA GENERAL`
+5. Read cupos → reserve → confirm (unless `--dry-run`)
+
+Slots usually release **5:00–8:00 America/Costa_Rica**. Outside that window, `no_slots` is normal. Use `--force` to try anyway.
+
+---
+
+## CLI reference
 
 | Command | Purpose |
 |---------|---------|
+| `python scripts/edus_cli.py validate` | Check deps / env readiness |
 | `python scripts/edus_cli.py book -s medicina_general --force` | Book medicina general |
 | `python scripts/edus_cli.py book -s odontologia --force` | Book odontología |
-| `python scripts/edus_cli.py check -s medicina_general --force` | Availability only |
+| `python scripts/edus_cli.py check -s medicina_general --force` | Availability only (no reserve) |
 | `python scripts/edus_cli.py monitor` | Watchdog (silent if no slots) |
-| `python scripts/edus_cli.py last` | Last result |
-| `python scripts/edus_cli.py validate` | Dependency check |
+| `python scripts/edus_cli.py last` | Last run result |
 | `python scripts/edus_cli.py install-browsers` | Install Chromium |
 
 Flags: `--force` (ignore 5–8am monitor gate), `--dry-run`, `--headed`.
+
+---
 
 ## Business rules
 
 1. Credentials only from `EDUS_CEDULA` / `EDUS_CLAVE` (env or `.env`).
 2. Monitor window (when slots usually release): **5:00–8:00 America/Costa_Rica**.
-3. Auto-book only appointment times in `EDUS_SLOT_START`–`EDUS_SLOT_END` (default 05:00–08:00). Other times are reported, not booked.
+3. Auto-book only appointment times in `EDUS_SLOT_START`–`EDUS_SLOT_END` (default 05:00–08:00).
 4. Skip dates already present in the appointments table (anti-duplicate).
 5. Optional family member via `FAMILIAR_CEDULA` / `FAMILIAR_NOMBRE`.
+6. If EDUS returns **Request Rejected** (WAF), stop and wait 15–60 minutes — do not retry in a tight loop.
 
-## Windows Task Scheduler
+---
+
+## Schedule (watchdog)
+
+**macOS / Linux (cron):**
+
+```bash
+chmod +x scripts/install.sh edus_citas_schedule.sh
+./scripts/install.sh
+# Example: every 5 minutes during the morning window
+# */5 5-7 * * * /path/to/edus_citas_schedule.sh medicina_general
+```
+
+**Windows Task Scheduler:**
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup_task_scheduler.ps1 -Specialty medicina_general
 ```
 
-Creates a task that runs every 5 minutes; the Python watchdog stays silent outside the Costa Rica release window and when there are no cupos.
+---
 
-## Linux / cron
+## Agent / Telegram (optional)
 
-```bash
-chmod +x scripts/install.sh edus_citas_schedule.sh
-./scripts/install.sh
-# cron: */5 5-7 * * * /path/to/edus_citas_schedule.sh medicina_general
-```
+If you run this through an AI agent (e.g. Hermes) or Telegram, point it at:
+
+- [`HERMES.md`](HERMES.md) — agent setup
+- [`TELEGRAM_PROMPT.md`](TELEGRAM_PROMPT.md) — copy-paste bot context
+
+The agent should only run `scripts/edus_cli.py` with the project Python — not invent new Playwright scripts.
+
+Skills in this repo (for agents that load local skills):
+
+| Skill | Path |
+|-------|------|
+| Executable booking | `.agents/skills/edus-citas/` |
+| Official guide mirror | `.agents/skills/edus-citas-automation-guide/` |
+
+---
 
 ## Project layout
 
 ```
 edus/                  # Python package (login, captcha, booking, watchdog)
 scripts/edus_cli.py    # CLI entrypoint
-.agents/skills/edus-citas/SKILL.md
+scripts/install.sh     # macOS / Linux install
+scripts/install.ps1    # Windows install
+EDUS-Citas-Automation-Guide.md
 data/last_result.json  # last run summary
 logs/edus.log          # rotating log
 .env.example
 ```
 
-## Guide compliance map
-
-| Guide phase | Implementation |
-|-------------|----------------|
-| Phase 2 Login + CAPTCHA HTTP download + OCR PSM7 | `edus/login.py`, `edus/captcha.py` |
-| Phase 3 Reserva (PrimeFaces add, servicio, especialidad, cupos, confirmar) | `edus/booking.py` |
-| Phase 4 Grupo familiar DOM walk | `edus/familiar.py` |
-| Phase 5 Watchdog silent/noisy + schedule | `edus/watchdog.py`, `edus_citas_schedule.sh`, Task Scheduler scripts |
-| DOM IDs / pitfalls | `edus/constants.py` + getElementById usage |
+---
 
 ## Tests
 
-```powershell
+```bash
 python -m pip install -r requirements.txt
 python -m pytest tests/test_core.py -q
 python -m pytest tests/test_smoke_network.py -q
 ```
 
-Live booking requires valid credentials and available cupos; use `--dry-run` first.
+Live booking needs valid credentials and available cupos; use `--dry-run` first.
 
 ## Security
 
