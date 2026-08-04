@@ -1,0 +1,69 @@
+# === Secrets / credentials (NEVER commit) ===
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.key
+credentials*
+*credentials*.json
+secrets/
+.secrets/
+
+# === Local Python environments ===
+.venv/
+venv/
+env/
+.env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+
+# === Runtime / personal data ===
+logs/
+*.log
+data/*.json
+!data/.gitkeep
+captcha*.png
+*_processed.png
+*.bin
+diag_*.bin
+.tmp/
+.temp/
+tmp/
+temp/
+
+# === Upstream vendor clone (nested .git; re-clone locally) ===
+vendor/
+
+# === OS / IDE ===
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+.cursor/
+
+# === Playwright ===
+test-results/
+playwright-report/
+playwright/.cache/
+.playwright/
+
+# === Optional local overrides ===
+*.local
+local_settings.py
