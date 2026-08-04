@@ -58,7 +58,6 @@ async def click_agregar_cita_titular(page: Page, settings: Settings) -> None:
                 el.click();
                 return 'dom';
             }
-            // fallback: find link by text
             const nodes = Array.from(document.querySelectorAll('a, button, span'));
             const target = nodes.find((n) => (n.textContent || '').trim() === 'Agregar una cita');
             if (target) {
@@ -73,9 +72,18 @@ async def click_agregar_cita_titular(page: Page, settings: Settings) -> None:
         raise RuntimeError("Could not click 'Agregar una cita' (titular)")
     logger.info("Opened add-cita form via %s", clicked)
     await wait_ajax(page, max(settings.ajax_wait_seconds, 3.5))
+    # Wait for Solicitar Cita form (Servicio dropdown)
+    try:
+        await page.wait_for_function(
+            """() => !!document.getElementById('formSIAC:menuServicios_input')
+                 || !!document.getElementById('formSIAC:menuServicios_label')""",
+            timeout=20000,
+        )
+    except Exception as exc:
+        raise RuntimeError("Solicitar Cita form did not load (Servicio dropdown missing)") from exc
 
 
-async def _select_by_code_or_label(
+async def _select_primefaces_menu(
     page: Page,
     input_id: str,
     *,
@@ -83,140 +91,246 @@ async def _select_by_code_or_label(
     labels: list[str],
     wait_seconds: float,
 ) -> str:
-    result = await page.evaluate(
-        """([inputId, code, labels]) => {
-            const input = document.getElementById(inputId);
-            if (!input) throw new Error('Select input not found: ' + inputId);
+    """
+    Select a PrimeFaces selectOneMenu via real UI clicks (Playwright locators).
+    Setting only the hidden _input leaves the visible label empty.
+    """
+    select_id = input_id.replace("_input", "")
+    label_id = f"{select_id}_label"
+    panel_id = f"{select_id}_panel"
 
-            const selectId = inputId.replace(/_input$/, '');
-            let select = document.getElementById(selectId);
-            // PrimeFaces often uses a hidden select sibling
-            if (!select || select.tagName !== 'SELECT') {
-                select = document.querySelector('select[name=\"' + inputId.replace('_input','') + '\"]')
-                      || document.querySelector('select[id=\"' + selectId + '\"]')
-                      || input.closest('div')?.querySelector('select')
-                      || null;
-            }
+    # Escape JSF colons for CSS selectors
+    def css_id(raw: str) -> str:
+        return "#" + raw.replace(":", "\\:")
 
-            const normalize = (s) => (s || '').toUpperCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
-            const labelNeedles = (labels || []).map(normalize);
-
-            let chosenValue = null;
-            let chosenText = null;
-
-            const options = select ? Array.from(select.options) : [];
+    # When reading options from underlying select, use *_input (actual <select>)
+    meta = await page.evaluate(
+        """([selectId, code, labels]) => {
+            const normalize = (s) => (s || '').toUpperCase().normalize('NFD')
+                .replace(/[\\u0300-\\u036f]/g, '').trim();
+            const needles = (labels || []).map(normalize).filter(Boolean);
+            const select =
+                document.getElementById(selectId + '_input')
+                || document.getElementById(selectId)
+                || document.querySelector('select[id*=\"' + selectId.split(':').pop() + '\"]');
+            const options = (select && select.options) ? Array.from(select.options) : [];
+            let match = null;
             if (code) {
-                const byCode = options.find((o) => String(o.value) === String(code));
-                if (byCode) {
-                    chosenValue = byCode.value;
-                    chosenText = byCode.textContent;
-                }
+                match = options.find((o) => String(o.value) === String(code) && String(o.value) !== '' && String(o.value) !== '-1');
             }
-            if (!chosenValue && labelNeedles.length) {
-                const byLabel = options.find((o) => {
+            if (!match && needles.length) {
+                match = options.find((o) => {
                     const t = normalize(o.textContent);
-                    return labelNeedles.some((n) => t.includes(n));
+                    if (!t || t.includes('SELECCIONE')) return false;
+                    return needles.some((n) => t === n || t.includes(n));
                 });
-                if (byLabel) {
-                    chosenValue = byLabel.value;
-                    chosenText = byLabel.textContent;
-                }
-            }
-
-            // Also try panel list items (PrimeFaces selectOneMenu)
-            if (!chosenValue) {
-                const panel = document.getElementById(selectId + '_panel')
-                    || document.querySelector('[id=\"' + selectId + '_panel\"]');
-                // Open menu
-                const trigger = document.getElementById(selectId + '_label')
-                    || document.querySelector('[id=\"' + selectId + '_label\"]')
-                    || input;
-                if (trigger) trigger.click();
-            }
-
-            if (chosenValue != null) {
-                input.value = chosenValue;
-                if (select) {
-                    select.value = chosenValue;
-                    select.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-                // Trigger PrimeFaces ajax if present
-                if (typeof PrimeFaces !== 'undefined') {
-                    try {
-                        const widget = Object.values(PrimeFaces.widgets || {}).find(
-                            (w) => w && w.id === selectId
-                        );
-                        if (widget && widget.selectValue) {
-                            widget.selectValue(chosenValue);
-                        }
-                    } catch (e) {}
-                }
-                return { ok: true, value: chosenValue, text: (chosenText || '').trim() };
             }
             return {
-                ok: false,
-                options: options.map((o) => ({ value: o.value, text: (o.textContent || '').trim() })),
+                optionTexts: options.map((o) => (o.textContent || '').trim()),
+                matchText: match ? (match.textContent || '').trim() : '',
+                matchValue: match ? String(match.value) : '',
+                needles,
             };
         }""",
-        [input_id, code or "", labels],
+        [select_id, code or "", labels],
     )
 
-    if not result.get("ok"):
-        # Second pass: open PF menu and click item by label
-        clicked = await page.evaluate(
-            """([inputId, labels]) => {
-                const selectId = inputId.replace(/_input$/, '');
-                const normalize = (s) => (s || '').toUpperCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+    search_texts = []
+    if meta.get("matchText"):
+        search_texts.append(meta["matchText"])
+    search_texts.extend(labels or [])
+
+    label = page.locator(css_id(label_id))
+    await label.wait_for(state="visible", timeout=15000)
+    await label.click()
+    await wait_ajax(page, 0.6)
+
+    panel = page.locator(css_id(panel_id))
+    try:
+        await panel.wait_for(state="visible", timeout=5000)
+    except Exception:
+        # Retry open
+        await label.click()
+        await wait_ajax(page, 0.8)
+        await panel.wait_for(state="visible", timeout=5000)
+
+    clicked_text = None
+    for text in search_texts:
+        if not text:
+            continue
+        # Exact then contains
+        item = panel.locator("li, .ui-selectonemenu-item").filter(has_text=text)
+        count = await item.count()
+        if count == 0:
+            # Case-insensitive contains via JS fallback below
+            continue
+        await item.first.click()
+        clicked_text = text
+        break
+
+    if not clicked_text:
+        # JS fallback: click by normalized needle
+        clicked_text = await page.evaluate(
+            """([panelId, labels]) => {
+                const normalize = (s) => (s || '').toUpperCase().normalize('NFD')
+                    .replace(/[\\u0300-\\u036f]/g, '').trim();
                 const needles = (labels || []).map(normalize);
-                const trigger = document.getElementById(selectId + '_label')
-                    || document.querySelector('label[id=\"' + selectId + '_label\"]')
-                    || document.getElementById(inputId);
-                if (trigger) trigger.click();
-                const items = Array.from(document.querySelectorAll('li, .ui-selectonemenu-item, td'));
-                for (const item of items) {
-                    const t = normalize(item.textContent);
-                    if (needles.some((n) => t.includes(n))) {
-                        item.click();
-                        return (item.textContent || '').trim();
+                const panel = document.getElementById(panelId) || document;
+                const items = Array.from(panel.querySelectorAll('li, .ui-selectonemenu-item'));
+                for (const el of items) {
+                    const t = normalize(el.textContent);
+                    if (!t || t.includes('SELECCIONE')) continue;
+                    if (needles.some((n) => t === n || t.includes(n))) {
+                        el.click();
+                        return (el.textContent || '').trim();
                     }
                 }
                 return null;
             }""",
-            [input_id, labels],
-        )
-        await wait_ajax(page, wait_seconds)
-        if clicked:
-            logger.info("Selected %s via menu label: %s", input_id, clicked)
-            return str(clicked)
-        options = result.get("options") or []
-        raise RuntimeError(
-            f"Could not select option for {input_id} (code={code}, labels={labels}). "
-            f"Available: {options[:20]}"
+            [panel_id, labels],
         )
 
+    if not clicked_text:
+        raise RuntimeError(
+            f"Could not find option for {select_id}. "
+            f"labels={labels} options={meta.get('optionTexts')} "
+            f"needles={meta.get('needles')}"
+        )
+
+    # Force change/AJAX after UI click
+    await page.evaluate(
+        """([selectId, valueHint]) => {
+            const select = document.getElementById(selectId);
+            const input = document.getElementById(selectId + '_input');
+            if (select && valueHint) {
+                const opt = Array.from(select.options || []).find(
+                    (o) => String(o.value) === String(valueHint)
+                        || (o.textContent || '').trim().toUpperCase().includes(String(valueHint).toUpperCase())
+                );
+                if (opt) {
+                    select.value = opt.value;
+                    if (input) input.value = opt.value;
+                }
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (typeof PrimeFaces !== 'undefined' && PrimeFaces.ab) {
+                try { PrimeFaces.ab({s: selectId, e: 'valueChange', f: 'formSIAC', p: selectId}); }
+                catch (e) {
+                    try { PrimeFaces.ab({s: selectId, f: 'formSIAC'}); } catch (e2) {}
+                }
+            }
+        }""",
+        [select_id, meta.get("matchValue") or clicked_text],
+    )
+
     await wait_ajax(page, wait_seconds)
-    logger.info("Selected %s => %s (%s)", input_id, result.get("text"), result.get("value"))
-    return str(result.get("text") or result.get("value"))
+
+    visible = ""
+    try:
+        visible = (await label.inner_text()).strip()
+    except Exception:
+        visible = str(clicked_text)
+
+    logger.info(
+        "Selected %s via ui_click => %s (visible=%r)",
+        select_id,
+        clicked_text,
+        visible,
+    )
+    if not visible or "SELECCIONE" in visible.upper():
+        raise RuntimeError(
+            f"Visible label for {select_id} still empty/placeholder after select: {visible!r}"
+        )
+    return visible
+
+
+async def _especialidad_options_ready(page: Page) -> bool:
+    """True when Especialidad <select> (_input) has real options after Servicio AJAX."""
+    return bool(
+        await page.evaluate(
+            """() => {
+                // PrimeFaces: root is DIV; real <select> is *_input
+                const select =
+                    document.getElementById('formSIAC:menuEspecialidades_input')
+                    || document.querySelector('select[id*=\"menuEspecialidades\"]');
+                const label = document.getElementById('formSIAC:menuEspecialidades_label');
+                const labelText = ((label && label.textContent) || '').trim().toUpperCase();
+
+                if (select && select.options) {
+                    const opts = Array.from(select.options).filter((o) => {
+                        const t = (o.textContent || '').trim().toUpperCase();
+                        const v = String(o.value || '');
+                        return v && v !== '-1' && v !== '' && !t.includes('SELECCIONE');
+                    });
+                    if (opts.length > 0) return true;
+                }
+
+                const panel = document.getElementById('formSIAC:menuEspecialidades_panel');
+                if (panel) {
+                    const items = Array.from(panel.querySelectorAll('li, .ui-selectonemenu-item'))
+                        .map((el) => (el.textContent || '').trim().toUpperCase())
+                        .filter((t) => t && !t.includes('SELECCIONE'));
+                    if (items.length > 0) return true;
+                }
+
+                if (labelText && !labelText.includes('SELECCIONE')) return true;
+                return false;
+            }"""
+        )
+    )
 
 
 async def select_servicio(page: Page, preset: SpecialtyPreset, settings: Settings) -> str:
-    return await _select_by_code_or_label(
+    """Step 1 of Solicitar Cita: Servicio dropdown (MEDICINA | ODONTOLOGIA)."""
+    await wait_ajax(page, 0.8)
+    selected = await _select_primefaces_menu(
         page,
         MENU_SERVICIOS,
         code=preset.get("servicio_code", ""),
         labels=preset.get("servicio_labels", []),
-        wait_seconds=settings.ajax_wait_seconds,
+        wait_seconds=max(settings.ajax_wait_seconds, 4.0),
+    )
+    for i in range(40):
+        if await _especialidad_options_ready(page):
+            logger.info("Especialidad options ready after %.1fs", (i + 1) * 0.5)
+            return selected
+        await wait_ajax(page, 0.5)
+
+    diag = await page.evaluate(
+        """() => {
+            const sLabel = document.getElementById('formSIAC:menuServicios_label');
+            const eLabel = document.getElementById('formSIAC:menuEspecialidades_label');
+            const es = document.getElementById('formSIAC:menuEspecialidades');
+            const opts = (es && es.options) ? Array.from(es.options).slice(0, 12).map(
+                (o) => ({ v: o.value, t: (o.textContent || '').trim() })
+            ) : [];
+            return {
+                servicioLabel: sLabel ? (sLabel.textContent || '').trim() : null,
+                especialidadLabel: eLabel ? (eLabel.textContent || '').trim() : null,
+                optionCount: (es && es.options) ? es.options.length : -1,
+                options: opts,
+                bodySnippet: ((document.body && document.body.innerText) || '').slice(0, 400),
+            };
+        }"""
+    )
+    raise RuntimeError(
+        "After selecting Servicio, Especialidad options did not load "
+        f"(still on SELECCIONE ESPECIALIDAD...). diag={diag}"
     )
 
 
 async def select_especialidad(page: Page, preset: SpecialtyPreset, settings: Settings) -> str:
-    return await _select_by_code_or_label(
+    """Step 2 of Solicitar Cita: Especialidad (depends on Servicio)."""
+    if not await _especialidad_options_ready(page):
+        raise RuntimeError(
+            "Especialidad dropdown has no options yet — select Servicio (MEDICINA/ODONTOLOGIA) first"
+        )
+    return await _select_primefaces_menu(
         page,
         MENU_ESPECIALIDADES,
         code=preset.get("especialidad_code", ""),
         labels=preset.get("especialidad_labels", []),
-        wait_seconds=settings.ajax_wait_seconds,
+        wait_seconds=max(settings.ajax_wait_seconds, 3.0),
     )
 
 

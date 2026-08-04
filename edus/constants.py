@@ -77,7 +77,7 @@ SPECIALTY_PRESETS: dict[str, SpecialtyPreset] = {
         "label": "Odontología",
         "servicio_code": "",  # resolve by label when empty
         "especialidad_code": "",
-        "servicio_labels": ["ODONTO"],
+        "servicio_labels": ["ODONTOLOGIA", "ODONTOLOGÍA", "ODONTO"],
         "especialidad_labels": [
             "ODONTOLOGIA GENERAL",
             "ODONTOLOGÍA GENERAL",

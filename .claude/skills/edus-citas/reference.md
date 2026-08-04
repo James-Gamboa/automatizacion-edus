@@ -1,31 +1,42 @@
 # EDUS DOM / Guide Reference
 
-Official guide: https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss/blob/main/EDUS-Citas-Automation-Guide.md
+Official guide (local): [EDUS-Citas-Automation-Guide.md](../../../EDUS-Citas-Automation-Guide.md)
+
+## Solicitar Cita (UI order)
+
+1. **Establecimiento de Salud** — assigned (read-only), e.g. `227404 - EBAIS MILPA 1`
+2. **Servicio \*** — dropdown options typically:
+   - `MEDICINA`
+   - `ODONTOLOGIA`
+3. **Especialidad \*** — starts as `SELECCIONE ESPECIALIDAD...` until Servicio is chosen
+4. Cupos table — Fecha, Hora de Cita, N° de Cita, Consultorio, Funcionario, Ver cita
+
+**Must select Servicio first** (open PrimeFaces menu + click). Hidden `_input` alone leaves the visible label empty and Especialidad stuck on the placeholder.
 
 ## DOM IDs
 
 | Element | ID |
 |---------|-----|
 | Form login | `formInicioSesion` |
-| Tipo identificación | `formInicioSesion:tipIdentificacion_input` |
 | Usuario | `formInicioSesion:usuario` |
 | Clave | `formInicioSesion:clave` |
 | CAPTCHA input | `formInicioSesion:captchaDigitado` |
 | Botón login | `formInicioSesion:ejecutarPaso1` |
 | Form principal | `formSIAC` |
 | Botón agregar cita | `formSIAC:btnMenuAdd` |
-| Select servicio | `formSIAC:menuServicios_input` |
-| Select especialidad | `formSIAC:menuEspecialidades_input` |
+| Select servicio (hidden input) | `formSIAC:menuServicios_input` |
+| Select servicio (visible label) | `formSIAC:menuServicios_label` |
+| Select especialidad (hidden input) | `formSIAC:menuEspecialidades_input` |
+| Select especialidad (visible label) | `formSIAC:menuEspecialidades_label` |
 | Tabla cupos | `formSIAC:cuposDisponibles` |
 | Tabla familiares | `formSIAC:tablaFamiliares` |
-| Tabla citas familiar | `formSIAC:tablaCitasFam` |
 
-## Specialty codes
+## Specialty presets
 
-| Specialty | Servicio | Especialidad |
-|-----------|----------|--------------|
-| Medicina General | `1` | `1033` |
-| Odontología | resolve by label `ODONTO*` (optional `ODONTO_SERVICIO` / `ODONTO_ESPECIALIDAD`) |
+| Intent | Servicio (UI) | Especialidad (UI) | Codes |
+|--------|---------------|-------------------|-------|
+| Medicina general | MEDICINA | MEDICINA GENERAL | servicio `1`, especialidad `1033` |
+| Odontología | ODONTOLOGIA | ODONTOLOGIA GENERAL (typical) | by label / env override |
 
 ## Env vars
 

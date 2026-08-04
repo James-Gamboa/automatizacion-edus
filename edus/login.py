@@ -117,28 +117,15 @@ async def wait_for_login_form(page: Page, settings: Settings, *, navigate: bool 
 
 
 async def login(page: Page, settings: Settings) -> None:
-    """Login with CAPTCHA OCR retries. Reloads only when necessary."""
+    """Login with CAPTCHA OCR retries. Full page reload each attempt (official guide)."""
     max_attempts = max(1, settings.captcha_max_attempts)
     last_error = ""
-    form_ready = False
 
     for attempt in range(1, max_attempts + 1):
         logger.info("Login attempt %s/%s", attempt, max_attempts)
         try:
-            if not form_ready:
-                await wait_for_login_form(page, settings, navigate=True)
-                form_ready = True
-            else:
-                # Stay on the page; refresh captcha only (guide: new captcha per try)
-                await refresh_captcha_image(page)
-                await wait_ajax(page, 1.2)
-                # If form vanished (session/WAF), force a careful reload with backoff
-                still_there = await page.evaluate(
-                    "() => !!document.getElementById('formInicioSesion')"
-                )
-                if not still_there:
-                    await wait_ajax(page, min(5.0, attempt * 1.5))
-                    await wait_for_login_form(page, settings, navigate=True)
+            # Guide: each attempt reloads the page for a fresh CAPTCHA
+            await wait_for_login_form(page, settings, navigate=True)
 
             if await is_logged_in(page):
                 logger.info("Already logged in")
@@ -162,20 +149,20 @@ async def login(page: Page, settings: Settings) -> None:
                         logger.warning("CAPTCHA download failed on attempt %s: %s", attempt, exc)
                         if "WAF" in last_error or "Request Rejected" in last_error:
                             raise WafRejectedError(last_error) from exc
-                        # Back off before next try; may need full reload
-                        form_ready = False
-                        await wait_ajax(page, min(8.0, 2.0 + attempt))
+                        await wait_ajax(page, min(5.0, 1.5 + attempt * 0.3))
                         continue
                     except Exception as exc:
                         last_error = str(exc)
                         logger.warning("OCR failed on attempt %s: %s", attempt, exc)
                         await wait_ajax(page, 1.5)
                         continue
-                if not captcha_text:
-                    logger.warning("Empty OCR result on attempt %s", attempt)
-                    await wait_ajax(page, 1.5)
+                if not captcha_text or len(captcha_text) < 4:
+                    logger.warning(
+                        "Empty/short OCR result on attempt %s (%r)", attempt, captcha_text
+                    )
+                    await wait_ajax(page, 1.5 + (attempt % 3) * 0.5)
                     continue
-                logger.info("OCR candidate length=%s", len(captcha_text))
+                logger.info("OCR candidate=%r length=%s", captcha_text, len(captcha_text))
             else:
                 logger.info("CAPTCHA field not present; submitting without OCR")
 
@@ -193,7 +180,15 @@ async def login(page: Page, settings: Settings) -> None:
             await _click_id(page, LOGIN_SUBMIT)
             await wait_ajax(page, settings.ajax_wait_seconds)
             try:
-                await page.wait_for_load_state("networkidle", timeout=15000)
+                await page.wait_for_function(
+                    """() => {
+                        const body = (document.body && document.body.innerText) || '';
+                        return body.includes('Agregar una cita')
+                            || /captcha|incorrect|inv[aá]lid/i.test(body)
+                            || !!document.getElementById('formInicioSesion');
+                    }""",
+                    timeout=15000,
+                )
             except Exception:
                 pass
 
@@ -214,19 +209,15 @@ async def login(page: Page, settings: Settings) -> None:
             else:
                 last_error = "Login not confirmed (marker missing)"
             logger.warning("Login attempt %s failed: %s", attempt, last_error)
-            # After failed submit, form usually remains — refresh captcha next loop
-            form_ready = await page.evaluate(
-                "() => !!document.getElementById('formInicioSesion')"
-            )
-            await wait_ajax(page, 2.0)
+            # Brief pause before next full reload (reduces WAF pressure a bit)
+            await wait_ajax(page, 1.5 + (attempt % 4) * 0.4)
 
         except WafRejectedError:
             raise
         except Exception as exc:
             last_error = str(exc)
             logger.warning("Login attempt %s error: %s", attempt, exc)
-            form_ready = False
-            await wait_ajax(page, min(10.0, 2.0 + attempt))
+            await wait_ajax(page, min(8.0, 2.0 + attempt * 0.4))
 
     raise RuntimeError(
         f"Login failed after {max_attempts} attempts. Last error: {last_error}"

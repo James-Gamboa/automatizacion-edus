@@ -126,24 +126,41 @@ Login exitoso si el HTML resultante contiene `"Agregar una cita"`.
 
 ### Flujo de solicitud de cita
 
+Pantalla **Solicitar Cita** (después de "Agregar una cita"):
+
+| Campo UI | Notas |
+|----------|-------|
+| Establecimiento de Salud | Fijo / asignado (ej. `227404 - EBAIS MILPA 1`) — no se elige |
+| **Servicio \*** | Dropdown. Opciones típicas: **MEDICINA**, **ODONTOLOGIA** |
+| **Especialidad \*** | Dropdown dependiente. Empieza en `SELECCIONE ESPECIALIDAD...` hasta elegir Servicio |
+| Tabla de cupos | Fecha, Hora de Cita, N° de Cita, Consultorio, Funcionario, Ver cita |
+
+**Orden obligatorio:** Servicio → (AJAX carga especialidades) → Especialidad → cupos.
+
+> ⚠️ Si solo rellenás el input oculto de Especialidad sin hacer click real en **Servicio**, el label de Servicio queda vacío / Especialidad se queda en `SELECCIONE ESPECIALIDAD...` y no cargan cupos. Hay que abrir el selectOneMenu de PrimeFaces y clickear la opción.
+
 1. **Click "Agregar una cita"**:
    ```javascript
    PrimeFaces.ab({s: 'formSIAC:btnMenuAdd', f: 'formSIAC'});
    ```
-   Esperar 3-5s para que cargue el formulario.
+   Esperar 3-5s para que cargue el formulario **Solicitar Cita**.
 
-2. **Seleccionar servicio** (`formSIAC:menuServicios_input`):
-   - `1` = MEDICINA
+2. **Seleccionar servicio** (`formSIAC:menuServicios` / `_input` / `_label`):
+   - Opciones del dropdown: **MEDICINA**, **ODONTOLOGIA** (pueden variar por centro)
+   - Código guía: `1` = MEDICINA
    - Dispara AJAX onchange para cargar especialidades
+   - Verificar que el label visible muestre `MEDICINA` u `ODONTOLOGIA` (no vacío)
 
-3. **Seleccionar especialidad** (`formSIAC:menuEspecialidades_input`):
-   - `1033` = MEDICINA GENERAL
+3. **Seleccionar especialidad** (`formSIAC:menuEspecialidades` / `_input` / `_label`):
+   - Solo después de que desaparezca `SELECCIONE ESPECIALIDAD...` y haya opciones reales
+   - Medicina → `1033` = **MEDICINA GENERAL**
+   - Odontología → p. ej. **ODONTOLOGIA GENERAL** (por etiqueta; código configurable)
    - Dispara AJAX onchange para cargar cupos
 
 4. **Leer tabla de cupos** (`formSIAC:cuposDisponibles`):
    ```javascript
    const rows = document.querySelectorAll('#formSIAC\\:cuposDisponibles tbody tr');
-   // Columnas: Fecha, Hora, N°Cita, Consultorio, Funcionario, Ver cita
+   // Columnas: Fecha, Hora de Cita, N° de Cita, Consultorio, Funcionario, Ver cita
    ```
    - Nota: los `:` en IDs JSF deben escaparse con `\\` en selectores CSS
    - Alternativa: usar `document.getElementById('formSIAC:cuposDisponibles')` (sin escape)
@@ -300,6 +317,7 @@ Cron: `*/5 5-7 * * *` (cada 5 minutos, 5am-7:59am)
 
 ## Pitfalls
 
+- **Servicio antes que Especialidad**: En Solicitar Cita el dropdown **Servicio** (MEDICINA / ODONTOLOGIA) debe elegirse primero. Si no, Especialidad se queda en `SELECCIONE ESPECIALIDAD...`. No alcanza con setear el `_input` oculto: hay que clickear la opción en el panel PrimeFaces para que el label visible se actualice.
 - **ViewState obligatorio**: Sin ViewState en cada POST, el servidor rechaza la petición
 - **Sesión JSF expira rápido**: Cada ciclo de monitoreo debe iniciar sesión fresca
 - **CAPTCHA impredecible**: Tasa de acierto ~30-40%, requiere retry loop de 20-30 intentos
