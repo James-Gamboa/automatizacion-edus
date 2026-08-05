@@ -1,18 +1,57 @@
 # EDUS Citas Automation (CCSS Costa Rica)
 
-Automates login, CAPTCHA, and appointment booking on **EDUS Citas Web** (`https://edus.ccss.sa.cr/eduscitasweb/`), following the official guide:
+Automates login, CAPTCHA, and appointment booking on **EDUS Citas Web** (`https://edus.ccss.sa.cr/eduscitasweb/`).
 
-- Upstream: [automatizacion-citas-edus-ccss](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss)
-- Guide: [EDUS-Citas-Automation-Guide.md](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss/blob/main/EDUS-Citas-Automation-Guide.md)
-- Local copy in this repo: [`EDUS-Citas-Automation-Guide.md`](EDUS-Citas-Automation-Guide.md)
+### Based on the official guide — with extra automation
 
-This repo is the **ready-to-run implementation** of that guide (Playwright + CLI). You do not need to rebuild the flow from scratch.
+This project **follows** the official EDUS automation guide and then goes further: ready-to-run **Python scripts**, a full `edus/` package, and agent **skills** so Hermes / OpenClaw (or similar) can book with natural language instead of rebuilding Playwright from the guide alone.
 
-Optional upstream clone (gitignored under `vendor/`):
+| Repo | What you get | Link |
+|------|----------------|------|
+| **This repo (recommended to run)** | Python CLI, `edus/` package, install scripts, agent skills, Hermes/Telegram prompts | [James-Gamboa/automatizacion-edus](https://github.com/James-Gamboa/automatizacion-edus) |
+| **Original guide** | Official phases, DOM notes, architecture (build your own agent from the markdown) | [jeudytuanisapps/automatizacion-citas-edus-ccss](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss) |
+| Official guide file | [EDUS-Citas-Automation-Guide.md](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss/blob/main/EDUS-Citas-Automation-Guide.md) | also copied here as [`EDUS-Citas-Automation-Guide.md`](EDUS-Citas-Automation-Guide.md) |
+
+**What we added on top of the guide**
+
+- Python package `edus/` — login, CAPTCHA OCR voting, booking (Servicio → Especialidad), familiar, watchdog
+- CLI `scripts/edus_cli.py` — `book`, `check`, `monitor`, `last`, `validate`
+- Install scripts for Windows / macOS / Linux (`scripts/install.ps1`, `scripts/install.sh`)
+- Agent skills `edus-citas` + `edus-citas-automation-guide` (so the agent runs the CLI, not invents new browsers)
+- Example Telegram prompt: [`TELEGRAM_PROMPT.md`](TELEGRAM_PROMPT.md) · Hermes notes: [`HERMES.md`](HERMES.md)
+- Hardened config via `.env`, dry-run, WAF-aware retries, schedule helpers
+
+---
+
+## Clone
+
+### Option A — This repo (ready to install and run)
+
+```bash
+git clone https://github.com/James-Gamboa/automatizacion-edus.git
+cd automatizacion-edus
+```
+
+Then jump to [Just install and run](#just-install-and-run).
+
+### Option B — Original guide only
+
+Use this if you want the upstream markdown / skill guide and will implement automation yourself:
+
+```bash
+git clone https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss.git
+cd automatizacion-citas-edus-ccss
+```
+
+### Optional — keep the original guide next to this project
+
+From inside a clone of **this** repo:
 
 ```bash
 git clone https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss.git vendor/automatizacion-citas-edus-ccss
 ```
+
+(`vendor/` is gitignored.)
 
 ---
 
@@ -143,10 +182,11 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_task_scheduler.ps1 -Speci
 
 ## Agent / Telegram (optional)
 
-If you run this through an AI agent (e.g. Hermes) or Telegram, point it at:
+You can drive this CLI from **Hermes** or **OpenClaw** over Telegram (or similar).
 
-- [`HERMES.md`](HERMES.md) — agent setup
-- [`TELEGRAM_PROMPT.md`](TELEGRAM_PROMPT.md) — copy-paste bot context
+1. Clone **this** repo (Option A above) and install.
+2. Copy the example prompt from [`TELEGRAM_PROMPT.md`](TELEGRAM_PROMPT.md) into your bot (replace `<PROJECT_ROOT>`).
+3. Optional deeper setup: [`HERMES.md`](HERMES.md).
 
 The agent should only run `scripts/edus_cli.py` with the project Python — not invent new Playwright scripts.
 
@@ -157,6 +197,28 @@ Skills in this repo (for agents that load local skills):
 | Executable booking | `.agents/skills/edus-citas/` |
 | Official guide mirror | `.agents/skills/edus-citas-automation-guide/` |
 
+### Suggested videos (Hermes / OpenClaw)
+
+Community tutorials — not affiliated with this repo. Useful if you want the agent + Telegram gateway first, then point it at this project.
+
+**Hermes**
+
+| Video | Link |
+|-------|------|
+| Hermes Agent beginner guide (Telegram, skills, scheduling) | [youtube.com/watch?v=CwPUOVUdApE](https://www.youtube.com/watch?v=CwPUOVUdApE) |
+| Hermes 24/7 + full Telegram bot setup (also compares OpenClaw) | [youtube.com/watch?v=gzq_4hZsU4E](https://www.youtube.com/watch?v=gzq_4hZsU4E) |
+| Build your first Hermes agent (VPS / Docker) | [youtube.com/watch?v=6dkv_mzxPY0](https://www.youtube.com/watch?v=6dkv_mzxPY0) |
+
+**OpenClaw**
+
+| Video | Link |
+|-------|------|
+| Full OpenClaw setup (VPS, Telegram, skills) | [youtube.com/watch?v=fcZMmP5dsl4](https://www.youtube.com/watch?v=fcZMmP5dsl4) |
+| Complete OpenClaw walkthrough | [youtube.com/watch?v=UrPuSAFd_Ss](https://www.youtube.com/watch?v=UrPuSAFd_Ss) |
+| freeCodeCamp: OpenClaw full tutorial for beginners | [youtube.com/watch?v=n1sfrc-RjyM](https://www.youtube.com/watch?v=n1sfrc-RjyM) |
+
+After the agent is online, paste [`TELEGRAM_PROMPT.md`](TELEGRAM_PROMPT.md) and ask it to run `scripts/edus_cli.py` from this repo.
+
 ---
 
 ## Project layout
@@ -166,6 +228,8 @@ edus/                  # Python package (login, captcha, booking, watchdog)
 scripts/edus_cli.py    # CLI entrypoint
 scripts/install.sh     # macOS / Linux install
 scripts/install.ps1    # Windows install
+TELEGRAM_PROMPT.md     # example bot prompt (use <PROJECT_ROOT>)
+HERMES.md              # Hermes / agent setup
 EDUS-Citas-Automation-Guide.md
 data/last_result.json  # last run summary
 logs/edus.log          # rotating log
