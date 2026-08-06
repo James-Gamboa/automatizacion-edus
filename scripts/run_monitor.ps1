@@ -22,8 +22,11 @@ if (Test-Path $EnvFile) {
     }
 }
 
+$VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
+$Python = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
+
 $argsList = @("scripts\edus_cli.py", "monitor", "--specialty", $Specialty)
 if ($Force) { $argsList += "--force" }
 
-& python @argsList
+& $Python @argsList
 exit $LASTEXITCODE

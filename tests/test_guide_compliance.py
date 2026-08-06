@@ -5,7 +5,7 @@ GUIDE_CHECKLIST = [
     ("Phase 2 login form IDs", "edus/login.py + edus/constants.py", True),
     ("Phase 2 CAPTCHA HTTP download (not screenshot)", "edus/captcha.py", True),
     ("Phase 2 OCR grayscale+contrast+3x+PSM7+whitelist", "edus/captcha.py", True),
-    ("Phase 2 captcha retry 20-30", "EDUS_CAPTCHA_MAX_ATTEMPTS default 30", True),
+    ("Phase 2 captcha retry loop", "EDUS_CAPTCHA_MAX_ATTEMPTS default 15 (raise in .env)", True),
     ("Phase 2 success marker Agregar una cita", "edus/login.py", True),
     ("Phase 3 PrimeFaces btnMenuAdd", "edus/booking.py", True),
     ("Phase 3 servicio/especialidad selects", "edus/booking.py", True),
