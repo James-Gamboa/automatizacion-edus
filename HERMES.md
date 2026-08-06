@@ -130,17 +130,31 @@ Reglas:
 
 ---
 
-## Watchdog cron (guide Phase 5)
+## Watchdog cron → Telegram (your main idea)
 
-```yaml
-# Hermes cron idea:
-#   script: edus_citas_schedule.sh   # or scripts/run_monitor.ps1 on Windows
-#   schedule: every 5m
-#   no_agent: true
-#   deliver: telegram
+Hermes runs a **script-only** job every 5 minutes. No LLM. If EDUS has cupos (inside 5–8 CR), stdout is **delivered to Telegram**. You reply OK and the chat agent runs `book`.
+
+```powershell
+# Script must live here:
+#   %USERPROFILE%\.hermes\scripts\edus_monitor_alert.py
+# (copy from scripts/hermes_edus_monitor_alert.py and set project path)
+
+hermes cron create "*/5 5-7 * * *" --no-agent --script edus_monitor_alert.py --deliver telegram --name "edus-cupos"
+hermes cron list
+hermes cron status
 ```
 
-Windows: `scripts/setup_task_scheduler.ps1`
+`*/5 5-7 * * *` = every 5 minutes only in hours 5–7 (stops before 8:00). Python also skips EDUS outside that window.
+
+Full guide: [`MONITOR.md`](MONITOR.md)
+
+When Telegram says there are cupos:
+
+```text
+ok, reservame el primero
+```
+
+Optional Windows Task Scheduler (toast only): `scripts/setup_task_scheduler.ps1`
 
 ---
 

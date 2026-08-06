@@ -2,7 +2,10 @@
 param(
     [ValidateSet("medicina_general", "odontologia")]
     [string]$Specialty = "medicina_general",
-    [switch]$Force
+    [switch]$Force,
+    # Default behavior is check-only unless -AutoBook is set
+    [switch]$CheckOnly,
+    [switch]$AutoBook
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,8 +28,33 @@ if (Test-Path $EnvFile) {
 $VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
 $Python = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
 
+$useCheckOnly = -not $AutoBook
 $argsList = @("scripts\edus_cli.py", "monitor", "--specialty", $Specialty)
 if ($Force) { $argsList += "--force" }
+if ($useCheckOnly) { $argsList += "--check-only" }
 
-& $Python @argsList
-exit $LASTEXITCODE
+$output = & $Python @argsList 2>&1 | Out-String
+$code = $LASTEXITCODE
+if ($output.Trim()) {
+    Write-Host $output
+    # Windows toast when cupos appear (check-only / booked)
+    if ($output -match "hay cupos|slots_available|Booked|booked") {
+        try {
+            Add-Type -AssemblyName System.Windows.Forms | Out-Null
+            Add-Type -AssemblyName System.Drawing | Out-Null
+            $notify = New-Object System.Windows.Forms.NotifyIcon
+            $notify.Icon = [System.Drawing.SystemIcons]::Information
+            $notify.Visible = $true
+            $notify.BalloonTipTitle = "EDUS Citas"
+            $trimmed = $output.Trim() -replace "`r", ""
+            $tip = $trimmed.Substring(0, [Math]::Min(200, $trimmed.Length))
+            $notify.BalloonTipText = $tip
+            $notify.ShowBalloonTip(8000)
+            Start-Sleep -Seconds 2
+            $notify.Dispose()
+        } catch {
+            # Toast is best-effort
+        }
+    }
+}
+exit $code

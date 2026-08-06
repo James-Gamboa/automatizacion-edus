@@ -163,6 +163,16 @@ Flags: `--force` (ignore 5–8am monitor gate), `--dry-run`, `--headed`.
 
 ## Schedule (watchdog)
 
+See [`MONITOR.md`](MONITOR.md) for the **alert → you say OK → book** flow.
+
+**Windows Task Scheduler (check-only by default):**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup_task_scheduler.ps1 -Specialty medicina_general
+```
+
+When cupos appear you get a Windows toast + slot list. Then book yourself or tell Telegram `ok, reservame el primero`.
+
 **macOS / Linux (cron):**
 
 ```bash
@@ -170,12 +180,6 @@ chmod +x scripts/install.sh edus_citas_schedule.sh
 ./scripts/install.sh
 # Example: every 5 minutes during the morning window
 # */5 5-7 * * * /path/to/edus_citas_schedule.sh medicina_general
-```
-
-**Windows Task Scheduler:**
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\setup_task_scheduler.ps1 -Specialty medicina_general
 ```
 
 ---
