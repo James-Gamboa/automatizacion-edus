@@ -14,7 +14,6 @@ from typing import Optional
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
-from edus.config import LOG_DIR
 from edus.constants import CAPTCHA_PATH
 
 logger = logging.getLogger("edus.captcha")
@@ -229,13 +228,8 @@ def ocr_captcha(image_path: Path, *, tesseract_cmd: str = "") -> str:
 
 
 def _save_debug_captcha(image_path: Path, *, tag: str) -> None:
-    try:
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-        dest = LOG_DIR / f"captcha_debug_{tag}_{int(time.time())}.png"
-        dest.write_bytes(image_path.read_bytes())
-        logger.debug("Saved debug CAPTCHA to %s", dest)
-    except Exception:
-        pass
+    # Intentionally no-op: do not keep CAPTCHA images on disk.
+    return
 
 
 async def _collect_captcha_urls(page) -> list[str]:

@@ -34,6 +34,24 @@ class WafRejectedError(RuntimeError):
     """EDUS/F5 WAF blocked this client (Request Rejected)."""
 
 
+def _cleanup_captcha_files() -> None:
+    """Delete any leftover CAPTCHA PNGs from logs/ after a successful login."""
+    from edus.config import LOG_DIR
+
+    if not LOG_DIR.exists():
+        return
+    removed = 0
+    for pattern in ("captcha_attempt_*.png", "captcha_debug_*.png", "captcha_*.png"):
+        for path in LOG_DIR.glob(pattern):
+            try:
+                path.unlink(missing_ok=True)
+                removed += 1
+            except OSError:
+                pass
+    if removed:
+        logger.info("Removed %s leftover CAPTCHA file(s) from %s", removed, LOG_DIR)
+
+
 async def _set_input_value(page: Page, element_id: str, value: str) -> None:
     await page.evaluate(
         """([id, value]) => {
@@ -129,6 +147,7 @@ async def login(page: Page, settings: Settings) -> None:
 
             if await is_logged_in(page):
                 logger.info("Already logged in")
+                _cleanup_captcha_files()
                 return
 
             html = await page.content()
@@ -196,6 +215,7 @@ async def login(page: Page, settings: Settings) -> None:
 
             if await is_logged_in(page):
                 logger.info("Login successful on attempt %s", attempt)
+                _cleanup_captcha_files()
                 return
 
             page_text = await page.inner_text("body")

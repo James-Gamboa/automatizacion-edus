@@ -5,12 +5,29 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# Load .env if present
+# Prefer project venv when present (avoids wrong system Python / Pillow breaks)
+PYTHON_BIN="${ROOT}/.venv/bin/python"
+if [[ ! -x "${PYTHON_BIN}" ]]; then
+  PYTHON_BIN="$(command -v python3 || true)"
+fi
+: "${PYTHON_BIN:?python3 / .venv not found}"
+
+# Load .env if present (export KEY=VAL lines only — safer than source for passwords)
 if [[ -f .env ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    [[ -z "${line}" || "${line}" == \#* ]] && continue
+    [[ "${line}" != *=* ]] && continue
+    key="${line%%=*}"
+    val="${line#*=}"
+    key="${key%"${key##*[![:space:]]}"}"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%\"}"
+    val="${val#\"}"
+    val="${val%\'}"
+    val="${val#\'}"
+    export "${key}=${val}"
+  done < .env
 fi
 
 : "${EDUS_CEDULA:?EDUS_CEDULA is required}"
@@ -28,5 +45,6 @@ fi
 
 mkdir -p logs
 # stderr to log; keep cron quiet unless actionable stdout from watchdog
-python3 scripts/edus_cli.py monitor --specialty "${SPECIALTY}" --force \
+# || true: intentional for cron (no_slots / outside window must not mail noise)
+"${PYTHON_BIN}" scripts/edus_cli.py monitor --specialty "${SPECIALTY}" --force \
   2>> logs/edus_errors.log || true
