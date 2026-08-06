@@ -59,6 +59,11 @@ def _build_parser() -> argparse.ArgumentParser:
     monitor = sub.add_parser("monitor", help="Watchdog mode (silent when no slots)")
     monitor.add_argument("--specialty", "-s", default="medicina_general")
     monitor.add_argument("--force", action="store_true")
+    monitor.add_argument(
+        "--check-only",
+        action="store_true",
+        help="Alert when slots exist; do NOT auto-book (you confirm later)",
+    )
 
     sub.add_parser("last", help="Show last execution result")
     sub.add_parser("validate", help="Validate dependencies")
@@ -109,7 +114,12 @@ async def _cmd_check(args: argparse.Namespace) -> int:
 async def _cmd_monitor(args: argparse.Namespace) -> int:
     settings = load_settings()
     setup_logging(settings.log_level)
-    return await run_watchdog(args.specialty, settings=settings, force=args.force)
+    return await run_watchdog(
+        args.specialty,
+        settings=settings,
+        force=args.force,
+        check_only=bool(getattr(args, "check_only", False)),
+    )
 
 
 def _cmd_last() -> int:

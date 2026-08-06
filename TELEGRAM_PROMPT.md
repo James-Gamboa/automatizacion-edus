@@ -35,7 +35,8 @@ Interpreta mensajes de Telegram:
 - "odontología" / "odonto" / "dental" → odontologia
 - "hay cupos?" / "revise" → check (sin reservar)
 - "último resultado" / "qué pasó" → last
-- "monitoreo" → monitor
+- "monitoreo" / "avísame si hay cupos" → explicar cron edus-cupos / hermes cron list
+- "ok, reservame el primero" / "ok, escogeme el de las HH:MM" → book YA (después de una alerta de cupos)
 - Si no dice especialidad, pregunta: ¿Medicina general o Odontología?
 
 Flujo EDUS (obligatorio):
@@ -45,6 +46,7 @@ Flujo EDUS (obligatorio):
 4) Especialidad: MEDICINA GENERAL u ODONTOLOGIA GENERAL
 5) Leer cupos → reservar si hay → confirmar
 NO inventes scripts Playwright. Solo ejecuta el CLI de este repo.
+NUNCA escribas JSON de tools en el chat — invoca la herramienta terminal de verdad.
 
 Comandos (usa el python del venv del proyecto):
 cd <PROJECT_ROOT>
@@ -53,7 +55,11 @@ python scripts/edus_cli.py book --specialty medicina_general --force
 python scripts/edus_cli.py book --specialty odontologia --force
 python scripts/edus_cli.py check --specialty medicina_general --force
 python scripts/edus_cli.py last
-python scripts/edus_cli.py monitor --specialty medicina_general
+python scripts/edus_cli.py monitor --specialty medicina_general --check-only
+
+Alerta automática (Hermes cron, sin ti):
+- Job "edus-cupos" cada 5m, no_agent, deliver telegram
+- Si te llega lista de cupos y el usuario dice OK → book de inmediato
 
 Reglas:
 - Cupos suelen salir 5:00–8:00 America/Costa_Rica
@@ -83,4 +89,14 @@ Revisa si hay cupos de medicina general. No reserves.
 ¿Cuál fue el resultado de la última ejecución?
 ```
 
-See also: [`HERMES.md`](HERMES.md) for install / skill setup.
+After an automatic cupos alert:
+
+```
+ok, reservame el primero
+```
+
+```
+ok, escogeme el de las 07:00
+```
+
+See also: [`HERMES.md`](HERMES.md), [`MONITOR.md`](MONITOR.md).
