@@ -62,6 +62,34 @@ def test_filter_slots_excludes_out_of_window_and_dates() -> None:
     assert len(out) == 2
 
 
+def test_telegram_alert_lists_out_of_window_and_booked() -> None:
+    from edus.watchdog import format_telegram_result
+
+    listed = format_telegram_result(
+        RunResult(
+            status="slots_out_of_window",
+            message="Found 1 slot(s) outside booking window (05:00-08:00)",
+            specialty="Medicina General",
+            slots_out_of_window=[{"fecha": "14/08/2026", "hora": "09:00"}],
+        )
+    )
+    assert "14/08/2026 09:00" in listed
+    assert "NO reservadas" in listed
+    assert "Responde" not in listed
+
+    reserved = format_telegram_result(
+        RunResult(
+            status="booked",
+            message="Booked",
+            specialty="Medicina General",
+            booked=True,
+            booked_slot={"fecha": "14/08/2026", "hora": "07:00"},
+        )
+    )
+    assert "CITA RESERVADA" in reserved
+    assert "07:00" in reserved
+
+
 def test_result_store_roundtrip(tmp_path: Path) -> None:
     path = tmp_path / "last_result.json"
     result = RunResult(status="booked", message="ok", specialty="Medicina General", booked=True)

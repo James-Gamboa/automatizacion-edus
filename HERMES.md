@@ -139,12 +139,12 @@ Hermes runs a **script-only** job every 5 minutes. No LLM. If EDUS has cupos (in
 #   %USERPROFILE%\.hermes\scripts\edus_monitor_alert.py
 # (copy from scripts/hermes_edus_monitor_alert.py and set project path)
 
-hermes cron create "*/5 5-7 * * *" --no-agent --script edus_monitor_alert.py --deliver telegram --name "edus-cupos"
+hermes cron create "every 5m" --no-agent --script edus_monitor_alert.py --deliver telegram --name "edus-cupos"
 hermes cron list
 hermes cron status
 ```
 
-`*/5 5-7 * * *` = every 5 minutes only in hours 5–7 (stops before 8:00). Python also skips EDUS outside that window.
+`every 5m` = search anytime. No Telegram if EDUS has no cupos. If cupos exist (including hours after 08:00), send the list. Does not auto-book.
 
 Full guide: [`MONITOR.md`](MONITOR.md)
 

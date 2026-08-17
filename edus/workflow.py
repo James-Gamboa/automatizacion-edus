@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -33,6 +34,7 @@ async def check_and_book(
     settings: Optional[Settings] = None,
     force: bool = False,
     book: bool = True,
+    any_time: bool = False,
 ) -> RunResult:
     """
     Full flow:
@@ -91,15 +93,21 @@ async def check_and_book(
                 return result
 
             slots = await parse_cupos(page)
-            in_window, out_window = filter_slots(slots, settings)
+            filter_settings = (
+                replace(settings, enforce_slot_window=False) if any_time else settings
+            )
+            in_window, out_window = filter_slots(slots, filter_settings)
             result.slots_found = [s.as_dict() for s in in_window]
             result.slots_out_of_window = [s.as_dict() for s in out_window]
 
             if out_window and not in_window:
                 result.status = "slots_out_of_window"
+                listed = ", ".join(
+                    f"{s.fecha} {s.hora}" for s in out_window[:5]
+                )
                 result.message = (
                     f"Found {len(out_window)} slot(s) outside booking window "
-                    f"({settings.slot_start}–{settings.slot_end}); none reserved."
+                    f"({settings.slot_start}-{settings.slot_end}): {listed}; none reserved."
                 )
                 result.exit_code = 0
                 save_result(result)

@@ -55,11 +55,12 @@ python scripts/edus_cli.py book --specialty medicina_general --force
 python scripts/edus_cli.py book --specialty odontologia --force
 python scripts/edus_cli.py check --specialty medicina_general --force
 python scripts/edus_cli.py last
-python scripts/edus_cli.py monitor --specialty medicina_general --check-only
+python scripts/edus_cli.py monitor --specialty medicina_general --any-time
 
-Alerta automática (Hermes cron, sin ti):
+Alerta automatica (Hermes cron, sin modelo, SIN reservar):
 - Job "edus-cupos" cada 5m, no_agent, deliver telegram
-- Si te llega lista de cupos y el usuario dice OK → book de inmediato
+- Si hay cupo (cualquier hora de la cita) te manda la LISTA. No reserva.
+- Sin cupos = silencio. No inventes scripts de cron nuevos.
 
 Reglas:
 - Cupos suelen salir 5:00–8:00 America/Costa_Rica

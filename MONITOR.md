@@ -1,32 +1,27 @@
-# Hermes + Telegram auto-alert for EDUS cupos
+# Hermes + Telegram: list cupos, do not auto-book
 
-Your idea: **Hermes Agent + Telegram** watches EDUS and messages you when there are cupos. You reply OK and pick the slot.
+Script-only cron (`--no-agent`). **Never reserves.** Telegram only gets a **list** when EDUS has cupos.
 
 ## Flow
 
 ```
-every 5 min (Hermes cron, no LLM)
-    → edus_monitor_alert.py
-    → project .venv + monitor --check-only
-    → no cupos / outside 5–8 CR  → empty stdout → silent
-    → hay cupos                 → Telegram message with list
-You on Telegram:
-    → "ok, reservame el primero"
-    → or "ok, escogeme el de las 07:00"
-Hermes agent:
-    → runs book CLI (must invoke terminal tool for real)
+every 5 min, any hour (Hermes cron, no LLM)
+    -> search EDUS
+    -> no cupos -> silent (no Telegram)
+    -> hay cupos (even if hora is after 08:00) -> Telegram list
 ```
+
+You book later yourself if you want that slot.
 
 ## Already set up on this PC (if you ran setup)
 
 | Item | Value |
 |------|--------|
-| Script | `%USERPROFILE%\.hermes\scripts\edus_monitor_alert.py` |
+| Script | `%LOCALAPPDATA%\hermes\scripts\edus_monitor_alert.py` |
 | Job | `edus-cupos` |
-| Schedule | `*/5 5-7 * * *` (only **05:00–07:59**, not all day) |
-| Mode | `--no-agent` (no model cost) |
+| Schedule | `every 5m` (searches anytime; silent when empty) |
+| Mode | `--no-agent` + `--check-only` (list only) |
 | Deliver | `telegram` |
-| Window | Python still only looks for cupos **5:00–8:00 America/Costa_Rica** |
 
 Check:
 
@@ -58,12 +53,12 @@ Copy-Item scripts\hermes_edus_monitor_alert.py "$dest\edus_monitor_alert.py"
 3. Create cron:
 
 ```powershell
-hermes cron create "*/5 5-7 * * *" --no-agent --script edus_monitor_alert.py --deliver telegram --name "edus-cupos"
+hermes cron create "every 5m" --no-agent --script edus_monitor_alert.py --deliver telegram --name "edus-cupos"
 ```
 
 4. Gateway must be running (`hermes cron status` → Gateway is running).
 
-5. Paste [`TELEGRAM_PROMPT.md`](TELEGRAM_PROMPT.md) into the bot so when you say OK it runs `book`, not JSON.
+5. Cron lists cupos only — it does **not** auto-book.
 
 ### How to know your bot will alert you
 
@@ -73,27 +68,22 @@ hermes cron create "*/5 5-7 * * *" --no-agent --script edus_monitor_alert.py --d
 | Gateway running | `hermes cron status` |
 | Script exists | `dir $env:LOCALAPPDATA\hermes\scripts\edus_monitor_alert.py` |
 | Force one run | `hermes cron run <job_id>` then `hermes cron runs <job_id>` → should say `completed` |
-| Telegram | Message only if there is stdout (cupos **or** error). **No cupos = silence** (normal). |
+| Telegram | Message only if there is a cupos **list** (or error). **No cupos = silence**. |
 
 Silent between checks does **not** mean it is broken.
 
-## What you send on Telegram
-
-When the bot alerts with cupos:
+## What Telegram looks like
 
 ```text
-ok, reservame el primero
+EDUS - cupos disponibles (NO reservadas)
+Especialidad: Medicina General
+
+Lista:
+  1. 14/08/2026 09:00
+  2. 15/08/2026 07:00
 ```
 
-```text
-ok, escogeme el de las 07:00
-```
-
-Optional specialty:
-
-```text
-ok, medicina general, el primero
-```
+The cron does **not** book. If you want that slot, run `book` yourself or tell Telegram later.
 
 ## Pause / resume
 
@@ -112,7 +102,7 @@ Or in Telegram chat: “pausa el monitoreo de citas EDUS”.
 | Alert channel | Telegram | Windows toast |
 | Needs Hermes gateway | Yes | No |
 | LLM cost for check | No (`--no-agent`) | No |
-| Confirm booking | Reply on Telegram | Run CLI / tell bot |
+| Confirm booking | You decide later | Optional toast |
 | PowerShell windows | No | Yes (annoying) — **prefer Hermes only** |
 
 **Recommendation:** use Hermes cron only. Do **not** also register `setup_task_scheduler.ps1` unless you want a local toast backup (it can flash PowerShell every few minutes).

@@ -4,7 +4,7 @@ Install to Hermes scripts dir (Windows often):
   %LOCALAPPDATA%\\hermes\\scripts\\edus_monitor_alert.py
 
 Then:
-  hermes cron create "*/5 5-7 * * *" --no-agent --script edus_monitor_alert.py --deliver telegram --name edus-cupos
+  hermes cron create "every 5m" --no-agent --script edus_monitor_alert.py --deliver telegram --name edus-cupos
 
 Rules (Hermes):
   - Empty stdout  → silent (no Telegram message)
@@ -55,22 +55,6 @@ def _clean_env() -> dict[str, str]:
 
 
 def main() -> int:
-    # Extra guard: silent outside 05:00–07:59 America/Costa_Rica
-    try:
-        from datetime import datetime, timedelta, timezone
-
-        try:
-            from zoneinfo import ZoneInfo
-
-            tz = ZoneInfo("America/Costa_Rica")
-        except Exception:
-            tz = timezone(timedelta(hours=-6))
-        hour = datetime.now(tz).hour
-        if hour < 5 or hour >= 8:
-            return 0
-    except Exception:
-        pass
-
     root = _project_root()
     if not root.is_dir():
         print(f"EDUS project not found: {root}", file=sys.stderr)
@@ -82,14 +66,17 @@ def main() -> int:
         print(f"Missing CLI: {cli}", file=sys.stderr)
         return 1
 
+    env = _clean_env()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     proc = subprocess.run(
-        [str(py), "-I", str(cli), "monitor", "--specialty", SPECIALTY, "--check-only"],
+        [str(py), "-I", str(cli), "monitor", "--specialty", SPECIALTY, "--check-only", "--any-time", "--force"],
         cwd=str(root),
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
-        env=_clean_env(),
+        env=env,
     )
 
     out = (proc.stdout or "").strip()
@@ -101,10 +88,6 @@ def main() -> int:
 
     if out:
         print(out)
-        if "hay cupos" in out.lower() or "slots_available" in out:
-            print()
-            print("Responde: ok, reservame el primero")
-            print("O: ok, escogeme el de las HH:MM")
     return 0
 
 

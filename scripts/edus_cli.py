@@ -62,7 +62,12 @@ def _build_parser() -> argparse.ArgumentParser:
     monitor.add_argument(
         "--check-only",
         action="store_true",
-        help="Alert when slots exist; do NOT auto-book (you confirm later)",
+        help="Alert when slots exist; do NOT auto-book",
+    )
+    monitor.add_argument(
+        "--any-time",
+        action="store_true",
+        help="Book/list slots even if the appointment hour is outside 05:00-08:00",
     )
 
     sub.add_parser("last", help="Show last execution result")
@@ -119,6 +124,7 @@ async def _cmd_monitor(args: argparse.Namespace) -> int:
         settings=settings,
         force=args.force,
         check_only=bool(getattr(args, "check_only", False)),
+        any_time=bool(getattr(args, "any_time", False)),
     )
 
 
