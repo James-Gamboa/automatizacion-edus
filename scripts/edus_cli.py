@@ -50,6 +50,13 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show browser window",
     )
+    book.add_argument(
+        "--any-time",
+        action="store_true",
+        help="Allow appointment hours outside 05:00-08:00",
+    )
+    book.add_argument("--fecha", default="", help="Prefer this date (DD/MM/YYYY)")
+    book.add_argument("--hora", default="", help="Prefer this time (HH:MM)")
 
     check = sub.add_parser("check", help="Check availability without booking")
     check.add_argument("--specialty", "-s", default="medicina_general")
@@ -99,7 +106,13 @@ async def _cmd_book(args: argparse.Namespace) -> int:
     logger = setup_logging(settings.log_level)
     logger.info("Starting book specialty=%s force=%s", args.specialty, args.force)
     result = await check_and_book(
-        args.specialty, settings=settings, force=args.force, book=True
+        args.specialty,
+        settings=settings,
+        force=args.force,
+        book=True,
+        any_time=bool(getattr(args, "any_time", False) or args.fecha or args.hora),
+        prefer_fecha=(args.fecha or "").strip() or None,
+        prefer_hora=(args.hora or "").strip() or None,
     )
     print(format_result_summary(result))
     return result.exit_code

@@ -23,7 +23,7 @@ from edus.config import Settings, load_settings
 from edus.familiar import switch_to_familiar
 from edus.login import login
 from edus.result_store import RunResult, save_result
-from edus.time_rules import is_within_monitor_window
+from edus.time_rules import is_within_monitor_window, slot_matches_prefer
 
 logger = logging.getLogger("edus.workflow")
 
@@ -35,6 +35,8 @@ async def check_and_book(
     force: bool = False,
     book: bool = True,
     any_time: bool = False,
+    prefer_fecha: Optional[str] = None,
+    prefer_hora: Optional[str] = None,
 ) -> RunResult:
     """
     Full flow:
@@ -93,12 +95,39 @@ async def check_and_book(
                 return result
 
             slots = await parse_cupos(page)
+            wants_specific = bool((prefer_fecha or "").strip() or (prefer_hora or "").strip())
             filter_settings = (
-                replace(settings, enforce_slot_window=False) if any_time else settings
+                replace(settings, enforce_slot_window=False)
+                if any_time or wants_specific
+                else settings
             )
             in_window, out_window = filter_slots(slots, filter_settings)
             result.slots_found = [s.as_dict() for s in in_window]
             result.slots_out_of_window = [s.as_dict() for s in out_window]
+
+            if wants_specific:
+                matched = [
+                    slot
+                    for slot in [*in_window, *out_window]
+                    if slot_matches_prefer(
+                        slot.fecha,
+                        slot.hora,
+                        prefer_fecha=prefer_fecha,
+                        prefer_hora=prefer_hora,
+                    )
+                ]
+                if not matched:
+                    result.status = "no_slots"
+                    result.message = (
+                        f"No hay cupo {prefer_fecha or ''} {prefer_hora or ''}".strip()
+                    )
+                    result.exit_code = 0
+                    save_result(result)
+                    return result
+                in_window = matched
+                out_window = []
+                result.slots_found = [s.as_dict() for s in in_window]
+                result.slots_out_of_window = []
 
             if out_window and not in_window:
                 result.status = "slots_out_of_window"

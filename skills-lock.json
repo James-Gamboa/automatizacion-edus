@@ -9,10 +9,7 @@
     "edus-citas": {
       "source": "local",
       "sourceType": "project",
-      "paths": [
-        ".agents/skills/edus-citas",
-        ".claude/skills/edus-citas"
-      ],
+      "paths": [".agents/skills/edus-citas", ".claude/skills/edus-citas"],
       "description": "Functional EDUS CCSS appointment booking skill (Playwright CLI)"
     },
     "edus-citas-automation-guide": {

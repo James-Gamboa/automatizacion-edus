@@ -144,7 +144,7 @@ hermes cron list
 hermes cron status
 ```
 
-`every 5m` = search anytime. No Telegram if EDUS has no cupos. If cupos exist (including hours after 08:00), send the list. Does not auto-book.
+Hermes still ticks `every 5m`. The script searches **every 5 min at 05:00–07:59 CR**, and **at most every 20 min** outside that window (`EDUS_OFF_HOURS_EVERY_MIN`, default 20). No Telegram if EDUS has no cupos. If cupos exist (including hours after 08:00), send the list. Does not auto-book.
 
 Full guide: [`MONITOR.md`](MONITOR.md)
 

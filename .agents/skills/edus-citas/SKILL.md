@@ -60,27 +60,29 @@ Always `cd` to the **project root** first.
 
 Prefer `--force` for interactive user requests so the monitor window does not block them; the slot-time window still applies.
 
-| User intent | Command |
-|-------------|---------|
-| Book medicina general | `.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty medicina_general --force` |
-| Book odontología | `.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty odontologia --force` |
-| Check availability only | `.\.venv\Scripts\python.exe scripts\edus_cli.py check --specialty medicina_general --force` |
-| Last result | `.\.venv\Scripts\python.exe scripts\edus_cli.py last` |
-| Start monitoring (Task Scheduler) | `powershell -ExecutionPolicy Bypass -File scripts/setup_task_scheduler.ps1` |
-| One-shot watchdog | `.\.venv\Scripts\python.exe scripts\edus_cli.py monitor --specialty medicina_general` |
-| Safe dry-run | `.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty medicina_general --force --dry-run --headed` |
+| User intent                                 | Command                                                                                                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Book medicina general                       | `.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty medicina_general --force --any-time`                                 |
+| Book odontología                            | `.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty odontologia --force --any-time`                                      |
+| Book a specific slot from a Telegram button | `.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty medicina_general --force --any-time --fecha 14/08/2026 --hora 07:00` |
+| Check availability only                     | `.\.venv\Scripts\python.exe scripts\edus_cli.py check --specialty medicina_general --force`                                           |
+| Last result                                 | `.\.venv\Scripts\python.exe scripts\edus_cli.py last`                                                                                 |
+| Start monitoring (Task Scheduler)           | `powershell -ExecutionPolicy Bypass -File scripts/setup_task_scheduler.ps1`                                                           |
+| One-shot watchdog                           | `.\.venv\Scripts\python.exe scripts\edus_cli.py monitor --specialty medicina_general`                                                 |
+| Safe dry-run                                | `.\.venv\Scripts\python.exe scripts\edus_cli.py book --specialty medicina_general --force --dry-run --headed`                         |
 
 Show the browser while debugging: add `--headed`.
 
 ## Agent workflow
 
+If the user wants to **book / reservar**, skip reading docs and skip validate. Run the mapped CLI immediately, then summarize `data/last_result.json`.
+
+For checks / last result / monitoring, follow:
+
 ```
 Task Progress:
-- [ ] 1. Read this skill + HERMES.md
-- [ ] 2. Validate with PROJECT venv python
-- [ ] 3. Confirm .env has EDUS_CEDULA + EDUS_CLAVE (never print the password)
-- [ ] 4. Run the mapped CLI command with the venv python
-- [ ] 5. Summarize data/last_result.json for the user (EN + ES)
+- [ ] 1. Run the mapped CLI command with the venv python (do not plan)
+- [ ] 2. Summarize data/last_result.json for the user (EN + ES)
 ```
 
 ### Booking rules (must enforce via config/CLI)
@@ -89,7 +91,7 @@ Task Progress:
 2. If `FAMILIAR_*` set, switch to family member before adding cita.
 3. Select service/specialty (medicina general codes `1` / `1033`; odontología by label).
 4. Parse cupos; exclude `EXCLUIR_FECHAS`.
-5. **Only reserve** slots whose time is inside `EDUS_SLOT_START`–`EDUS_SLOT_END` (default 05:00–08:00). Out-of-window slots: notify, do not book.
+5. **Only reserve** slots inside `EDUS_SLOT_START`–`EDUS_SLOT_END` unless the user tapped a Telegram button / sent `reserva esta DD/MM/YYYY HH:MM`. Then book that exact slot with `--fecha` `--hora` `--any-time --force`.
 6. Skip dates that already have an appointment (anti-duplicate).
 7. Confirm reservation unless `--dry-run`.
 8. Save result to `data/last_result.json` and write logs under `logs/edus.log`.

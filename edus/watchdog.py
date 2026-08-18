@@ -22,6 +22,10 @@ def _slot_line(slot: dict[str, Any], index: int) -> str:
     return f"  {index}. {fecha} {hora}{suffix}"
 
 
+def _slot_block(slot: dict[str, Any], index: int) -> list[str]:
+    return [_slot_line(slot, index)]
+
+
 def format_telegram_result(result: RunResult) -> str:
     """Plain UTF-8 text for Hermes --no-agent Telegram delivery (no LLM reply needed)."""
     if result.status in {"booked", "booked_dry_run"}:
@@ -56,14 +60,17 @@ def format_telegram_result(result: RunResult) -> str:
 
     all_slots = list(result.slots_found or []) + list(result.slots_out_of_window or [])
     lines = [
-        "EDUS - cupos disponibles (NO reservadas)",
+        "VIBRI",
+        "EDUS - hay citas (NO reservadas)",
         f"Especialidad: {result.specialty}",
         "",
         "Lista:",
     ]
     if all_slots:
         for i, slot in enumerate(all_slots, start=1):
-            lines.append(_slot_line(slot, i))
+            lines.extend(_slot_block(slot, i))
+        lines.append("")
+        lines.append("Toca el boton de abajo para reservar esa cita.")
     else:
         lines.append("  (sin detalle de hora)")
     return "\n".join(lines)
@@ -107,9 +114,17 @@ async def run_watchdog(
     if result.status in {"no_slots", "outside_monitor_window"}:
         return 0
 
+    text = format_telegram_result(result)
     if result.status == "error" or result.exit_code != 0:
-        print(format_telegram_result(result), file=sys.stderr)
+        print(text, file=sys.stderr)
         return 1
 
-    print(format_telegram_result(result))
+    slots = list(result.slots_found or []) + list(result.slots_out_of_window or [])
+    if slots:
+        from edus.telegram_buttons import send_cupos_alert
+
+        if send_cupos_alert(text, slots):
+            return 0
+
+    print(text)
     return 0

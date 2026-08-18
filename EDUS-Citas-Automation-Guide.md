@@ -13,6 +13,7 @@ Automatización de monitoreo y reserva de citas médicas en el sistema EDUS de l
 La CCSS tiene **dos sistemas separados** para citas:
 
 ### 1. EDUS Citas Web (citas médicas generales)
+
 - **URL**: `https://edus.ccss.sa.cr/eduscitasweb/`
 - **Backend**: JavaServer Faces (JSF) + PrimeFaces 12.0.0 sobre Oracle WebLogic
 - **Context path**: `/CitasWebPF/`
@@ -20,6 +21,7 @@ La CCSS tiene **dos sistemas separados** para citas:
 - **Endpoint público**: `centroSalud.xhtml` — lista establecimientos sin login
 
 ### 2. Sistema de Vacunación (Oracle APEX)
+
 - **URL**: `https://serviciosweb.ccss.sa.cr/pls/APEXPRD/APEX/r/servicios_ccss/sgap361/formulario`
 - **Backend**: Oracle APEX 24.x
 - **Sin login**: Formulario directo con selección de zona → área → fecha → hora
@@ -128,21 +130,23 @@ Login exitoso si el HTML resultante contiene `"Agregar una cita"`.
 
 Pantalla **Solicitar Cita** (después de "Agregar una cita"):
 
-| Campo UI | Notas |
-|----------|-------|
-| Establecimiento de Salud | Fijo / asignado (ej. `227404 - EBAIS MILPA 1`) — no se elige |
-| **Servicio \*** | Dropdown. Opciones típicas: **MEDICINA**, **ODONTOLOGIA** |
-| **Especialidad \*** | Dropdown dependiente. Empieza en `SELECCIONE ESPECIALIDAD...` hasta elegir Servicio |
-| Tabla de cupos | Fecha, Hora de Cita, N° de Cita, Consultorio, Funcionario, Ver cita |
+| Campo UI                 | Notas                                                                               |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| Establecimiento de Salud | Fijo / asignado (ej. `227404 - EBAIS MILPA 1`) — no se elige                        |
+| **Servicio \***          | Dropdown. Opciones típicas: **MEDICINA**, **ODONTOLOGIA**                           |
+| **Especialidad \***      | Dropdown dependiente. Empieza en `SELECCIONE ESPECIALIDAD...` hasta elegir Servicio |
+| Tabla de cupos           | Fecha, Hora de Cita, N° de Cita, Consultorio, Funcionario, Ver cita                 |
 
 **Orden obligatorio:** Servicio → (AJAX carga especialidades) → Especialidad → cupos.
 
 > ⚠️ Si solo rellenás el input oculto de Especialidad sin hacer click real en **Servicio**, el label de Servicio queda vacío / Especialidad se queda en `SELECCIONE ESPECIALIDAD...` y no cargan cupos. Hay que abrir el selectOneMenu de PrimeFaces y clickear la opción.
 
 1. **Click "Agregar una cita"**:
+
    ```javascript
-   PrimeFaces.ab({s: 'formSIAC:btnMenuAdd', f: 'formSIAC'});
+   PrimeFaces.ab({ s: "formSIAC:btnMenuAdd", f: "formSIAC" });
    ```
+
    Esperar 3-5s para que cargue el formulario **Solicitar Cita**.
 
 2. **Seleccionar servicio** (`formSIAC:menuServicios` / `_input` / `_label`):
@@ -158,8 +162,11 @@ Pantalla **Solicitar Cita** (después de "Agregar una cita"):
    - Dispara AJAX onchange para cargar cupos
 
 4. **Leer tabla de cupos** (`formSIAC:cuposDisponibles`):
+
    ```javascript
-   const rows = document.querySelectorAll('#formSIAC\\:cuposDisponibles tbody tr');
+   const rows = document.querySelectorAll(
+     "#formSIAC\\:cuposDisponibles tbody tr",
+   );
    // Columnas: Fecha, Hora de Cita, N° de Cita, Consultorio, Funcionario, Ver cita
    ```
    - Nota: los `:` en IDs JSF deben escaparse con `\\` en selectores CSS
@@ -169,12 +176,12 @@ Pantalla **Solicitar Cita** (después de "Agregar una cita"):
 
 ### Errores comunes
 
-| Mensaje | Significado |
-|---------|-------------|
-| "No se encontraron cupos disponibles" | Sin cupos |
-| "El paciente posea citas para ese mismo día" | Ya tiene cita ese día |
-| "El servicio o la especialidad no estén disponibles para el género" | Restricción de género |
-| "La cita haya sido asignada a otro usuario" | Cupo tomado entre consulta y reserva |
+| Mensaje                                                             | Significado                          |
+| ------------------------------------------------------------------- | ------------------------------------ |
+| "No se encontraron cupos disponibles"                               | Sin cupos                            |
+| "El paciente posea citas para ese mismo día"                        | Ya tiene cita ese día                |
+| "El servicio o la especialidad no estén disponibles para el género" | Restricción de género                |
+| "La cita haya sido asignada a otro usuario"                         | Cupo tomado entre consulta y reserva |
 
 ---
 
@@ -302,16 +309,16 @@ Cron: `*/5 5-7 * * *` (cada 5 minutos, 5am-7:59am)
 
 ## Stack Técnico
 
-| Componente | Detalle |
-|-----------|---------|
-| **Framework** | JSF 2.x + PrimeFaces 12.0.0 (theme: barcelona-ccss) |
-| **Servidor** | Oracle WebLogic (cookie: `CitasWebPFCK`) |
-| **State** | `javax.faces.ViewState` (GZIP + Base64, ~30KB, rota por request) |
-| **AJAX** | POST con `javax.faces.partial.ajax=true` |
-| **Encoding** | ISO-8859-1 en respuestas AJAX |
-| **Cookies** | `JSESSIONID` + WebLogic cookie (Secure) |
-| **Monitoreo** | Dynatrace RUM (`ruxitagentjs`) |
-| **ProjectStage** | Development (debug info visible) |
+| Componente       | Detalle                                                          |
+| ---------------- | ---------------------------------------------------------------- |
+| **Framework**    | JSF 2.x + PrimeFaces 12.0.0 (theme: barcelona-ccss)              |
+| **Servidor**     | Oracle WebLogic (cookie: `CitasWebPFCK`)                         |
+| **State**        | `javax.faces.ViewState` (GZIP + Base64, ~30KB, rota por request) |
+| **AJAX**         | POST con `javax.faces.partial.ajax=true`                         |
+| **Encoding**     | ISO-8859-1 en respuestas AJAX                                    |
+| **Cookies**      | `JSESSIONID` + WebLogic cookie (Secure)                          |
+| **Monitoreo**    | Dynatrace RUM (`ruxitagentjs`)                                   |
+| **ProjectStage** | Development (debug info visible)                                 |
 
 ---
 
@@ -369,26 +376,26 @@ Esta guía funciona con cualquier agente que pueda ejecutar **Playwright + Pytho
 
 ## Referencia Rápida de IDs del DOM
 
-| Elemento | ID |
-|----------|-----|
-| Form login | `formInicioSesion` |
-| Tipo identificación | `formInicioSesion:tipIdentificacion_input` |
-| Usuario | `formInicioSesion:usuario` |
-| Clave | `formInicioSesion:clave` |
-| CAPTCHA input | `formInicioSesion:captchaDigitado` |
-| Botón login | `formInicioSesion:ejecutarPaso1` |
-| Form principal | `formSIAC` |
-| Botón agregar cita (titular) | `formSIAC:btnMenuAdd` |
-| Select servicio | `formSIAC:menuServicios_input` |
-| Select especialidad | `formSIAC:menuEspecialidades_input` |
-| Tabla cupos | `formSIAC:cuposDisponibles` |
-| Tabla familiares | `formSIAC:tablaFamiliares` |
-| Tabla citas familiar | `formSIAC:tablaCitasFam` |
+| Elemento                     | ID                                         |
+| ---------------------------- | ------------------------------------------ |
+| Form login                   | `formInicioSesion`                         |
+| Tipo identificación          | `formInicioSesion:tipIdentificacion_input` |
+| Usuario                      | `formInicioSesion:usuario`                 |
+| Clave                        | `formInicioSesion:clave`                   |
+| CAPTCHA input                | `formInicioSesion:captchaDigitado`         |
+| Botón login                  | `formInicioSesion:ejecutarPaso1`           |
+| Form principal               | `formSIAC`                                 |
+| Botón agregar cita (titular) | `formSIAC:btnMenuAdd`                      |
+| Select servicio              | `formSIAC:menuServicios_input`             |
+| Select especialidad          | `formSIAC:menuEspecialidades_input`        |
+| Tabla cupos                  | `formSIAC:cuposDisponibles`                |
+| Tabla familiares             | `formSIAC:tablaFamiliares`                 |
+| Tabla citas familiar         | `formSIAC:tablaCitasFam`                   |
 
 ## Tipos de Identificación
 
-| Valor | Descripción | Dígitos |
-|-------|-------------|---------|
-| 0 | Cédula de identidad (nacional) | 9 |
-| 6 | Identificación temporal/interno | variable |
-| 7 | Extranjero con identificación CCSS | 11 |
+| Valor | Descripción                        | Dígitos  |
+| ----- | ---------------------------------- | -------- |
+| 0     | Cédula de identidad (nacional)     | 9        |
+| 6     | Identificación temporal/interno    | variable |
+| 7     | Extranjero con identificación CCSS | 11       |

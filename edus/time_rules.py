@@ -107,3 +107,22 @@ def is_slot_within_booking_window(
     start_t = parse_hhmm(start)
     end_t = parse_hhmm(end)
     return start_t <= slot < end_t
+
+
+def slot_matches_prefer(
+    fecha: str,
+    hora: str,
+    prefer_fecha: Optional[str] = None,
+    prefer_hora: Optional[str] = None,
+) -> bool:
+    """True when a cupo matches the Telegram button the user tapped."""
+    want_fecha = (prefer_fecha or "").strip()
+    want_hora = (prefer_hora or "").strip()
+    if want_fecha and want_fecha not in (fecha or ""):
+        return False
+    if want_hora:
+        got = normalize_slot_time(hora or "")
+        want = normalize_slot_time(want_hora)
+        if got is None or want is None or got != want:
+            return False
+    return bool(want_fecha or want_hora)

@@ -6,11 +6,11 @@ Automates login, CAPTCHA, and appointment booking on **EDUS Citas Web** (`https:
 
 This project **follows** the official EDUS automation guide and then goes further: ready-to-run **Python scripts**, a full `edus/` package, and agent **skills** so Hermes / OpenClaw (or similar) can book with natural language instead of rebuilding Playwright from the guide alone.
 
-| Repo | What you get | Link |
-|------|----------------|------|
-| **This repo (recommended to run)** | Python CLI, `edus/` package, install scripts, agent skills, Hermes/Telegram prompts | [James-Gamboa/automatizacion-edus](https://github.com/James-Gamboa/automatizacion-edus) |
-| **Original guide** | Official phases, DOM notes, architecture (build your own agent from the markdown) | [jeudytuanisapps/automatizacion-citas-edus-ccss](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss) |
-| Official guide file | [EDUS-Citas-Automation-Guide.md](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss/blob/main/EDUS-Citas-Automation-Guide.md) | also copied here as [`EDUS-Citas-Automation-Guide.md`](EDUS-Citas-Automation-Guide.md) |
+| Repo                               | What you get                                                                                                                                 | Link                                                                                                                |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **This repo (recommended to run)** | Python CLI, `edus/` package, install scripts, agent skills, Hermes/Telegram prompts                                                          | [James-Gamboa/automatizacion-edus](https://github.com/James-Gamboa/automatizacion-edus)                             |
+| **Original guide**                 | Official phases, DOM notes, architecture (build your own agent from the markdown)                                                            | [jeudytuanisapps/automatizacion-citas-edus-ccss](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss) |
+| Official guide file                | [EDUS-Citas-Automation-Guide.md](https://github.com/jeudytuanisapps/automatizacion-citas-edus-ccss/blob/main/EDUS-Citas-Automation-Guide.md) | also copied here as [`EDUS-Citas-Automation-Guide.md`](EDUS-Citas-Automation-Guide.md)                              |
 
 **What we added on top of the guide**
 
@@ -114,13 +114,13 @@ python3 scripts/edus_cli.py book --specialty medicina_general --force --dry-run
 
 ## What the guide covers (and what this repo does)
 
-| Guide phase | What it means | In this repo |
-|-------------|----------------|--------------|
-| Phase 1 — Reconocimiento | Public health-center listing without login | `edus/centros.py` |
-| Phase 2 — Login + CAPTCHA | HTTP CAPTCHA download + OCR retries | `edus/login.py`, `edus/captcha.py` |
-| Phase 3 — Reserva | Servicio → Especialidad → cupos → confirmar | `edus/booking.py` |
-| Phase 4 — Familiar | Book for a family member under the titular | `edus/familiar.py` |
-| Phase 5 — Watchdog | Silent monitor when no slots / outside window | `edus/watchdog.py`, schedule scripts |
+| Guide phase               | What it means                                 | In this repo                         |
+| ------------------------- | --------------------------------------------- | ------------------------------------ |
+| Phase 1 — Reconocimiento  | Public health-center listing without login    | `edus/centros.py`                    |
+| Phase 2 — Login + CAPTCHA | HTTP CAPTCHA download + OCR retries           | `edus/login.py`, `edus/captcha.py`   |
+| Phase 3 — Reserva         | Servicio → Especialidad → cupos → confirmar   | `edus/booking.py`                    |
+| Phase 4 — Familiar        | Book for a family member under the titular    | `edus/familiar.py`                   |
+| Phase 5 — Watchdog        | Silent monitor when no slots / outside window | `edus/watchdog.py`, schedule scripts |
 
 Typical EDUS flow this CLI follows:
 
@@ -136,15 +136,15 @@ Slots usually release **5:00–8:00 America/Costa_Rica**. Outside that window, `
 
 ## CLI reference
 
-| Command | Purpose |
-|---------|---------|
-| `python scripts/edus_cli.py validate` | Check deps / env readiness |
-| `python scripts/edus_cli.py book -s medicina_general --force` | Book medicina general |
-| `python scripts/edus_cli.py book -s odontologia --force` | Book odontología |
+| Command                                                        | Purpose                        |
+| -------------------------------------------------------------- | ------------------------------ |
+| `python scripts/edus_cli.py validate`                          | Check deps / env readiness     |
+| `python scripts/edus_cli.py book -s medicina_general --force`  | Book medicina general          |
+| `python scripts/edus_cli.py book -s odontologia --force`       | Book odontología               |
 | `python scripts/edus_cli.py check -s medicina_general --force` | Availability only (no reserve) |
-| `python scripts/edus_cli.py monitor` | Watchdog (silent if no slots) |
-| `python scripts/edus_cli.py last` | Last run result |
-| `python scripts/edus_cli.py install-browsers` | Install Chromium |
+| `python scripts/edus_cli.py monitor`                           | Watchdog (silent if no slots)  |
+| `python scripts/edus_cli.py last`                              | Last run result                |
+| `python scripts/edus_cli.py install-browsers`                  | Install Chromium               |
 
 Flags: `--force` (ignore 5–8am monitor gate), `--dry-run`, `--headed`.
 
@@ -196,9 +196,9 @@ The agent should only run `scripts/edus_cli.py` with the project Python — not 
 
 Skills in this repo (for agents that load local skills):
 
-| Skill | Path |
-|-------|------|
-| Executable booking | `.agents/skills/edus-citas/` |
+| Skill                 | Path                                          |
+| --------------------- | --------------------------------------------- |
+| Executable booking    | `.agents/skills/edus-citas/`                  |
 | Official guide mirror | `.agents/skills/edus-citas-automation-guide/` |
 
 ### Suggested videos (Hermes / OpenClaw)
@@ -207,18 +207,18 @@ Community tutorials — not affiliated with this repo. Useful if you want the ag
 
 **Hermes**
 
-| Video | Link |
-|-------|------|
-| Hermes Agent beginner guide (Telegram, skills, scheduling) | [youtube.com/watch?v=CwPUOVUdApE](https://www.youtube.com/watch?v=CwPUOVUdApE) |
+| Video                                                          | Link                                                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Hermes Agent beginner guide (Telegram, skills, scheduling)     | [youtube.com/watch?v=CwPUOVUdApE](https://www.youtube.com/watch?v=CwPUOVUdApE) |
 | Hermes 24/7 + full Telegram bot setup (also compares OpenClaw) | [youtube.com/watch?v=gzq_4hZsU4E](https://www.youtube.com/watch?v=gzq_4hZsU4E) |
-| Build your first Hermes agent (VPS / Docker) | [youtube.com/watch?v=6dkv_mzxPY0](https://www.youtube.com/watch?v=6dkv_mzxPY0) |
+| Build your first Hermes agent (VPS / Docker)                   | [youtube.com/watch?v=6dkv_mzxPY0](https://www.youtube.com/watch?v=6dkv_mzxPY0) |
 
 **OpenClaw**
 
-| Video | Link |
-|-------|------|
-| Full OpenClaw setup (VPS, Telegram, skills) | [youtube.com/watch?v=fcZMmP5dsl4](https://www.youtube.com/watch?v=fcZMmP5dsl4) |
-| Complete OpenClaw walkthrough | [youtube.com/watch?v=UrPuSAFd_Ss](https://www.youtube.com/watch?v=UrPuSAFd_Ss) |
+| Video                                              | Link                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Full OpenClaw setup (VPS, Telegram, skills)        | [youtube.com/watch?v=fcZMmP5dsl4](https://www.youtube.com/watch?v=fcZMmP5dsl4) |
+| Complete OpenClaw walkthrough                      | [youtube.com/watch?v=UrPuSAFd_Ss](https://www.youtube.com/watch?v=UrPuSAFd_Ss) |
 | freeCodeCamp: OpenClaw full tutorial for beginners | [youtube.com/watch?v=n1sfrc-RjyM](https://www.youtube.com/watch?v=n1sfrc-RjyM) |
 
 After the agent is online, paste [`TELEGRAM_PROMPT.md`](TELEGRAM_PROMPT.md) and ask it to run `scripts/edus_cli.py` from this repo.

@@ -15,6 +15,7 @@ from edus.time_rules import (
     is_slot_within_booking_window,
     is_within_monitor_window,
     normalize_slot_time,
+    slot_matches_prefer,
 )
 
 
@@ -73,7 +74,9 @@ def test_telegram_alert_lists_out_of_window_and_booked() -> None:
             slots_out_of_window=[{"fecha": "14/08/2026", "hora": "09:00"}],
         )
     )
+    assert listed.startswith("VIBRI\n")
     assert "14/08/2026 09:00" in listed
+    assert "Toca el boton" in listed
     assert "NO reservadas" in listed
     assert "Responde" not in listed
 
@@ -88,6 +91,54 @@ def test_telegram_alert_lists_out_of_window_and_booked() -> None:
     )
     assert "CITA RESERVADA" in reserved
     assert "07:00" in reserved
+
+
+def test_telegram_reserve_buttons_and_preferred_slot() -> None:
+    from edus.telegram_buttons import reply_keyboard, reservation_command
+
+    assert reservation_command("14/08/2026", "07:00") == "reserva esta 14/08/2026 07:00"
+    keyboard = reply_keyboard(
+        [
+            {"fecha": "14/08/2026", "hora": "07:00"},
+            {"fecha": "14/08/2026", "hora": "09:00"},
+        ]
+    )
+    labels = [row[0]["text"] for row in keyboard["keyboard"]]
+    assert labels == [
+        "reserva esta 14/08/2026 07:00",
+        "reserva esta 14/08/2026 09:00",
+    ]
+    assert keyboard["one_time_keyboard"] is True
+    assert slot_matches_prefer("14/08/2026", "07:00", "14/08/2026", "07:00")
+    assert not slot_matches_prefer("14/08/2026", "09:00", "14/08/2026", "07:00")
+
+
+def test_parse_fast_reserve_button_and_primero() -> None:
+    from edus.fast_book import is_fast_reserve_message, parse_reserve_intent
+
+    assert is_fast_reserve_message("reserva esta 14/08/2026 07:00")
+    parsed = parse_reserve_intent("reserva esta 14/08/2026 07:00")
+    assert parsed == {
+        "fecha": "14/08/2026",
+        "hora": "07:00",
+        "specialty": "medicina_general",
+    }
+    last = RunResult(
+        status="slots_available",
+        message="ok",
+        specialty="Odontología",
+        slots_found=[{"fecha": "15/08/2026", "hora": "06:30"}],
+        slots_out_of_window=[{"fecha": "15/08/2026", "hora": "09:00"}],
+    )
+    primero = parse_reserve_intent("ok, reservame el primero", last)
+    assert primero is not None
+    assert primero["fecha"] == "15/08/2026"
+    assert primero["hora"] == "06:30"
+    assert primero["specialty"] == "odontologia"
+    picked = parse_reserve_intent("ok, escogeme el de las 09:00", last)
+    assert picked is not None
+    assert picked["hora"] == "09:00"
+    assert not is_fast_reserve_message("hay cupos?")
 
 
 def test_result_store_roundtrip(tmp_path: Path) -> None:

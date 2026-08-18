@@ -15,28 +15,28 @@ Official guide (local): [EDUS-Citas-Automation-Guide.md](../../../EDUS-Citas-Aut
 
 ## DOM IDs
 
-| Element | ID |
-|---------|-----|
-| Form login | `formInicioSesion` |
-| Usuario | `formInicioSesion:usuario` |
-| Clave | `formInicioSesion:clave` |
-| CAPTCHA input | `formInicioSesion:captchaDigitado` |
-| Botón login | `formInicioSesion:ejecutarPaso1` |
-| Form principal | `formSIAC` |
-| Botón agregar cita | `formSIAC:btnMenuAdd` |
-| Select servicio (hidden input) | `formSIAC:menuServicios_input` |
-| Select servicio (visible label) | `formSIAC:menuServicios_label` |
-| Select especialidad (hidden input) | `formSIAC:menuEspecialidades_input` |
+| Element                             | ID                                  |
+| ----------------------------------- | ----------------------------------- |
+| Form login                          | `formInicioSesion`                  |
+| Usuario                             | `formInicioSesion:usuario`          |
+| Clave                               | `formInicioSesion:clave`            |
+| CAPTCHA input                       | `formInicioSesion:captchaDigitado`  |
+| Botón login                         | `formInicioSesion:ejecutarPaso1`    |
+| Form principal                      | `formSIAC`                          |
+| Botón agregar cita                  | `formSIAC:btnMenuAdd`               |
+| Select servicio (hidden input)      | `formSIAC:menuServicios_input`      |
+| Select servicio (visible label)     | `formSIAC:menuServicios_label`      |
+| Select especialidad (hidden input)  | `formSIAC:menuEspecialidades_input` |
 | Select especialidad (visible label) | `formSIAC:menuEspecialidades_label` |
-| Tabla cupos | `formSIAC:cuposDisponibles` |
-| Tabla familiares | `formSIAC:tablaFamiliares` |
+| Tabla cupos                         | `formSIAC:cuposDisponibles`         |
+| Tabla familiares                    | `formSIAC:tablaFamiliares`          |
 
 ## Specialty presets
 
-| Intent | Servicio (UI) | Especialidad (UI) | Codes |
-|--------|---------------|-------------------|-------|
-| Medicina general | MEDICINA | MEDICINA GENERAL | servicio `1`, especialidad `1033` |
-| Odontología | ODONTOLOGIA | ODONTOLOGIA GENERAL (typical) | by label / env override |
+| Intent           | Servicio (UI) | Especialidad (UI)             | Codes                             |
+| ---------------- | ------------- | ----------------------------- | --------------------------------- |
+| Medicina general | MEDICINA      | MEDICINA GENERAL              | servicio `1`, especialidad `1033` |
+| Odontología      | ODONTOLOGIA   | ODONTOLOGIA GENERAL (typical) | by label / env override           |
 
 ## Env vars
 

@@ -23,15 +23,14 @@ belt app run infsh/python-executor --input '{
 }'
 ```
 
-
 ## App Details
 
-| Property | Value |
-|----------|-------|
-| App ID | `infsh/python-executor` |
-| Environment | Python 3.10, CPU-only |
-| RAM | 8GB (default) / 16GB (high_memory) |
-| Timeout | 1-300 seconds (default: 30) |
+| Property    | Value                              |
+| ----------- | ---------------------------------- |
+| App ID      | `infsh/python-executor`            |
+| Environment | Python 3.10, CPU-only              |
+| RAM         | 8GB (default) / 16GB (high_memory) |
+| Timeout     | 1-300 seconds (default: 30)        |
 
 ## Input Schema
 
@@ -47,29 +46,35 @@ belt app run infsh/python-executor --input '{
 ## Pre-installed Libraries
 
 ### Web Scraping & HTTP
+
 - `requests`, `httpx`, `aiohttp` - HTTP clients
 - `beautifulsoup4`, `lxml` - HTML/XML parsing
 - `selenium`, `playwright` - Browser automation
 - `scrapy` - Web scraping framework
 
 ### Data Processing
+
 - `numpy`, `pandas`, `scipy` - Numerical computing
 - `matplotlib`, `seaborn`, `plotly` - Visualization
 
 ### Image Processing
+
 - `pillow`, `opencv-python-headless` - Image manipulation
 - `scikit-image`, `imageio` - Image algorithms
 
 ### Video & Audio
+
 - `moviepy` - Video editing
 - `av` (PyAV), `ffmpeg-python` - Video processing
 - `pydub` - Audio manipulation
 
 ### 3D Processing
+
 - `trimesh`, `open3d` - 3D mesh processing
 - `numpy-stl`, `meshio`, `pyvista` - 3D file formats
 
 ### Documents & Graphics
+
 - `svgwrite`, `cairosvg` - SVG creation
 - `reportlab`, `pypdf2` - PDF generation
 
@@ -182,4 +187,3 @@ npx skills add inference-sh/skills@llm-models
 - [Running Apps](https://inference.sh/docs/apps/running) - How to run apps via CLI
 - [App Code](https://inference.sh/docs/extend/app-code) - Understanding app execution
 - [Sandboxed Code Execution](https://inference.sh/blog/tools/sandboxed-execution) - Safe code execution for agents
-

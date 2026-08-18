@@ -5,23 +5,26 @@ Script-only cron (`--no-agent`). **Never reserves.** Telegram only gets a **list
 ## Flow
 
 ```
-every 5 min, any hour (Hermes cron, no LLM)
-    -> search EDUS
+Hermes cron every 5 min (no LLM)
+    05:00–07:59 CR -> search EDUS
+    other hours    -> search at most every 20 min (skip the other ticks, silent)
     -> no cupos -> silent (no Telegram)
     -> hay cupos (even if hora is after 08:00) -> Telegram list
 ```
 
 You book later yourself if you want that slot.
 
+To search every 10 minutes outside 5–8 instead of 20, set `EDUS_OFF_HOURS_EVERY_MIN=10` on the Hermes job environment.
+
 ## Already set up on this PC (if you ran setup)
 
-| Item | Value |
-|------|--------|
-| Script | `%LOCALAPPDATA%\hermes\scripts\edus_monitor_alert.py` |
-| Job | `edus-cupos` |
-| Schedule | `every 5m` (searches anytime; silent when empty) |
-| Mode | `--no-agent` + `--check-only` (list only) |
-| Deliver | `telegram` |
+| Item     | Value                                                                                 |
+| -------- | ------------------------------------------------------------------------------------- |
+| Script   | `%LOCALAPPDATA%\hermes\scripts\edus_monitor_alert.py`                                 |
+| Job      | `edus-cupos`                                                                          |
+| Schedule | `every 5m` tick; **search** every 5 min at 05:00–07:59 CR, every **20 min** otherwise |
+| Mode     | `--no-agent` + `--check-only` (list only)                                             |
+| Deliver  | `telegram`                                                                            |
 
 Check:
 
@@ -62,28 +65,33 @@ hermes cron create "every 5m" --no-agent --script edus_monitor_alert.py --delive
 
 ### How to know your bot will alert you
 
-| Check | What to do |
-|-------|------------|
-| Job active + Deliver telegram | `hermes cron list` |
-| Gateway running | `hermes cron status` |
-| Script exists | `dir $env:LOCALAPPDATA\hermes\scripts\edus_monitor_alert.py` |
-| Force one run | `hermes cron run <job_id>` then `hermes cron runs <job_id>` → should say `completed` |
-| Telegram | Message only if there is a cupos **list** (or error). **No cupos = silence**. |
+| Check                         | What to do                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| Job active + Deliver telegram | `hermes cron list`                                                                   |
+| Gateway running               | `hermes cron status`                                                                 |
+| Script exists                 | `dir $env:LOCALAPPDATA\hermes\scripts\edus_monitor_alert.py`                         |
+| Force one run                 | `hermes cron run <job_id>` then `hermes cron runs <job_id>` → should say `completed` |
+| Telegram                      | Message only if there is a cupos **list** (or error). **No cupos = silence**.        |
 
 Silent between checks does **not** mean it is broken.
 
 ## What Telegram looks like
 
 ```text
-EDUS - cupos disponibles (NO reservadas)
+VIBRI
+EDUS - hay citas (NO reservadas)
 Especialidad: Medicina General
 
 Lista:
   1. 14/08/2026 09:00
   2. 15/08/2026 07:00
+
+Toca el boton de abajo para reservar esa cita.
 ```
 
-The cron does **not** book. If you want that slot, run `book` yourself or tell Telegram later.
+Telegram lock-screen preview starts with **VIBRI**. Under the message Telegram shows a **button per cita**. Tap `reserva esta fecha hora` and the bot books that slot. No message if there are no cupos.
+
+The cron does **not** book. If you want that slot, tap the Telegram button. Hermes skips the LLM and runs `book` immediately.
 
 ## Pause / resume
 
@@ -97,13 +105,13 @@ Or in Telegram chat: “pausa el monitoreo de citas EDUS”.
 
 ## Difference vs Windows Task Scheduler
 
-| | Hermes cron → Telegram | Task Scheduler |
-|--|------------------------|----------------|
-| Alert channel | Telegram | Windows toast |
-| Needs Hermes gateway | Yes | No |
-| LLM cost for check | No (`--no-agent`) | No |
-| Confirm booking | You decide later | Optional toast |
-| PowerShell windows | No | Yes (annoying) — **prefer Hermes only** |
+|                      | Hermes cron → Telegram | Task Scheduler                          |
+| -------------------- | ---------------------- | --------------------------------------- |
+| Alert channel        | Telegram               | Windows toast                           |
+| Needs Hermes gateway | Yes                    | No                                      |
+| LLM cost for check   | No (`--no-agent`)      | No                                      |
+| Confirm booking      | You decide later       | Optional toast                          |
+| PowerShell windows   | No                     | Yes (annoying) — **prefer Hermes only** |
 
 **Recommendation:** use Hermes cron only. Do **not** also register `setup_task_scheduler.ps1` unless you want a local toast backup (it can flash PowerShell every few minutes).
 

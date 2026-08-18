@@ -35,6 +35,8 @@ coverage.xml
 logs/
 *.log
 data/*.json
+data/last_offhours_search.txt
+data/fast_book.lock
 !data/.gitkeep
 captcha*.png
 *_processed.png
