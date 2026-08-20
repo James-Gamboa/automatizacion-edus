@@ -1,19 +1,10 @@
 """Hermes no-agent cron script: alert Telegram when EDUS has cupos.
 
-Install to Hermes scripts dir (Windows often):
-  %LOCALAPPDATA%\\hermes\\scripts\\edus_monitor_alert.py
+Cadence (Costa Rica):
+  05:00–07:59 → every Hermes tick (~5 min). Alerta cupos nuevos hasta que reserves.
+  other hours → cada ~20 min: heartbeat "sin cupos" + busqueda real.
 
-Then:
-  hermes cron create "every 5m" --no-agent --script edus_monitor_alert.py --deliver telegram --name edus-cupos
-
-Rules (Hermes):
-  - Empty stdout  → silent (no Telegram message)
-  - Non-empty stdout → delivered to Telegram verbatim
-  - Uses PROJECT venv Python with env cleaned (Hermes PYTHONPATH breaks Pillow)
-
-Cadence (Costa Rica time):
-  - 05:00–07:59: every Hermes tick (typically 5 min)
-  - Other hours: skip unless EDUS_OFF_HOURS_EVERY_MIN minutes passed (default 20)
+Tras reservar (medicina u odonto) el monitor se pausa solo.
 """
 
 from __future__ import annotations
@@ -52,7 +43,6 @@ def _python(root: Path) -> Path:
 
 
 def _clean_env() -> dict[str, str]:
-    """Hermes injects PYTHONPATH to its venv; that breaks project Pillow/_imaging."""
     env = {k: v for k, v in os.environ.items() if isinstance(v, str)}
     for key in ("PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV"):
         env.pop(key, None)
@@ -70,8 +60,12 @@ def _costa_rica_hour() -> int:
     return datetime.now(tz).hour
 
 
+def _monitor_paused(root: Path) -> bool:
+    path = root / "data" / "monitor_paused.json"
+    return path.is_file()
+
+
 def _should_skip_off_hours(root: Path) -> bool:
-    """Inside 05:00-07:59 CR: always search. Outside: at most every N minutes."""
     hour = _costa_rica_hour()
     if 5 <= hour < 8:
         return False
@@ -95,6 +89,9 @@ def main() -> int:
     if not root.is_dir():
         print(f"EDUS project not found: {root}", file=sys.stderr)
         return 1
+
+    if _monitor_paused(root):
+        return 0
 
     if _should_skip_off_hours(root):
         return 0

@@ -76,6 +76,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Book/list slots even if the appointment hour is outside 05:00-08:00",
     )
+    monitor.add_argument(
+        "--resume",
+        action="store_true",
+        help="Clear monitor pause after a successful booking",
+    )
 
     sub.add_parser("last", help="Show last execution result")
     sub.add_parser("validate", help="Validate dependencies")
@@ -130,6 +135,13 @@ async def _cmd_check(args: argparse.Namespace) -> int:
 
 
 async def _cmd_monitor(args: argparse.Namespace) -> int:
+    from edus.monitor_state import resume_monitor
+
+    if getattr(args, "resume", False):
+        resume_monitor()
+        print("Monitor reanudado. Volvera a buscar cupos y avisar.")
+        return 0
+
     settings = load_settings()
     setup_logging(settings.log_level)
     return await run_watchdog(

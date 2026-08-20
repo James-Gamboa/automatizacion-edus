@@ -12,7 +12,7 @@ from edus.config import LAST_RESULT_PATH, ROOT_DIR
 from edus.result_store import RunResult, load_result
 
 RESERVA_ESTA_RE = re.compile(
-    r"reserva\s+esta\s+(\d{1,2}/\d{1,2}/\d{4})\s+(\d{1,2}:\d{2})",
+    r"reserva\s+esta\s+(?:fecha\s*)?(\d{1,2}/\d{1,2}/\d{4})\s+(?:hora de cita\s*)?(\d{1,2}:\d{2}(?:\s*[ap]\.?m\.?)?)",
     re.IGNORECASE,
 )
 PRIMERO_RE = re.compile(
@@ -80,9 +80,12 @@ def parse_reserve_intent(
 
     match = RESERVA_ESTA_RE.search(raw)
     if match:
+        from edus.telegram_buttons import normalize_slot_fields
+
+        fecha, hora = normalize_slot_fields(match.group(1), match.group(2))
         return {
-            "fecha": match.group(1),
-            "hora": match.group(2),
+            "fecha": fecha,
+            "hora": hora,
             "specialty": specialty,
         }
 

@@ -10,8 +10,38 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+def normalize_fecha(raw: str) -> str:
+    import re
+
+    text = re.sub(r"(?i)^fecha\s*", "", (raw or "").strip())
+    match = re.search(r"\d{1,2}/\d{1,2}/\d{4}", text)
+    return match.group(0) if match else text.strip()
+
+
+def normalize_hora_label(raw: str) -> str:
+    import re
+
+    from edus.time_rules import normalize_slot_time
+
+    text = re.sub(r"(?i)^hora de cita\s*", "", (raw or "").strip())
+    parsed = normalize_slot_time(text)
+    if parsed is not None:
+        return parsed.strftime("%H:%M")
+    match = re.search(r"\d{1,2}:\d{2}", text)
+    return match.group(0) if match else text.strip()
+
+
+def normalize_slot_fields(fecha: str, hora: str) -> tuple[str, str]:
+    return normalize_fecha(fecha), normalize_hora_label(hora)
+
+
+def remove_keyboard_markup() -> dict[str, bool]:
+    return {"remove_keyboard": True}
+
+
 def reservation_command(fecha: str, hora: str) -> str:
-    return f"reserva esta {fecha} {hora}"
+    clean_fecha, clean_hora = normalize_slot_fields(fecha, hora)
+    return f"reserva esta {clean_fecha} {clean_hora}"
 
 
 def _parse_env_file(path: Path) -> dict[str, str]:

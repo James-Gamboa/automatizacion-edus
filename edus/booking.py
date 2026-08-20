@@ -71,16 +71,40 @@ async def click_agregar_cita_titular(page: Page, settings: Settings) -> None:
     if not clicked:
         raise RuntimeError("Could not click 'Agregar una cita' (titular)")
     logger.info("Opened add-cita form via %s", clicked)
-    await wait_ajax(page, max(settings.ajax_wait_seconds, 3.5))
-    # Wait for Solicitar Cita form (Servicio dropdown)
-    try:
-        await page.wait_for_function(
-            """() => !!document.getElementById('formSIAC:menuServicios_input')
-                 || !!document.getElementById('formSIAC:menuServicios_label')""",
-            timeout=20000,
-        )
-    except Exception as exc:
-        raise RuntimeError("Solicitar Cita form did not load (Servicio dropdown missing)") from exc
+
+    last_exc: Exception | None = None
+    for attempt in range(1, 3):
+        await wait_ajax(page, max(settings.ajax_wait_seconds, 3.5 if attempt == 1 else 5.0))
+        try:
+            await page.wait_for_function(
+                """() => !!document.getElementById('formSIAC:menuServicios_input')
+                     || !!document.getElementById('formSIAC:menuServicios_label')""",
+                timeout=30000 if attempt == 1 else 45000,
+            )
+            return
+        except Exception as exc:
+            last_exc = exc
+            logger.warning(
+                "Solicitar Cita form not ready (attempt %s/2): %s",
+                attempt,
+                exc,
+            )
+            # Re-click once — EDUS sometimes eats the first AJAX open under load
+            if attempt == 1:
+                await page.evaluate(
+                    """(btnId) => {
+                        if (typeof PrimeFaces !== 'undefined' && PrimeFaces.ab) {
+                            PrimeFaces.ab({s: btnId, f: 'formSIAC'});
+                            return;
+                        }
+                        const el = document.getElementById(btnId);
+                        if (el) el.click();
+                    }""",
+                    BTN_ADD_CITA,
+                )
+    raise RuntimeError(
+        "Solicitar Cita form did not load (Servicio dropdown missing)"
+    ) from last_exc
 
 
 async def _select_primefaces_menu(
@@ -372,8 +396,28 @@ async def parse_cupos(page: Page) -> list[Slot]:
         TABLA_CUPOS,
     )
     slots = [Slot(**row) for row in rows]
-    logger.info("Parsed %s cupo rows", len(slots))
-    return slots
+    cleaned: list[Slot] = []
+    for slot in slots:
+        from edus.telegram_buttons import normalize_slot_fields
+
+        fecha, hora = normalize_slot_fields(slot.fecha, slot.hora)
+        lowered = f"{fecha} {hora}".lower()
+        if "fecha" in lowered and "hora" in lowered:
+            continue
+        if not fecha or fecha == "?" or not hora or hora == "?":
+            continue
+        cleaned.append(
+            Slot(
+                fecha=fecha,
+                hora=hora,
+                numero=slot.numero,
+                consultorio=slot.consultorio,
+                funcionario=slot.funcionario,
+                row_index=slot.row_index,
+            )
+        )
+    logger.info("Parsed %s cupo rows", len(cleaned))
+    return cleaned
 
 
 async def has_existing_appointment_same_day(page: Page, fecha: str) -> bool:

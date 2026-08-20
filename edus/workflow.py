@@ -22,6 +22,7 @@ from edus.browser import open_browser
 from edus.config import Settings, load_settings
 from edus.familiar import switch_to_familiar
 from edus.login import login
+from edus.monitor_state import pause_monitor
 from edus.result_store import RunResult, save_result
 from edus.time_rules import is_within_monitor_window, slot_matches_prefer
 
@@ -171,6 +172,12 @@ async def check_and_book(
                     )
                     result.exit_code = 0
                     save_result(result)
+                    if result.status == "booked":
+                        pause_monitor(
+                            reason="booked",
+                            specialty=result.specialty,
+                            slot=result.booked_slot,
+                        )
                     return result
 
             result.status = "booking_failed"

@@ -37,6 +37,8 @@ logs/
 data/*.json
 data/last_offhours_search.txt
 data/fast_book.lock
+data/monitor_paused.json
+data/last_alerted_slots.txt
 !data/.gitkeep
 captcha*.png
 *_processed.png

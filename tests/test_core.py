@@ -97,6 +97,9 @@ def test_telegram_reserve_buttons_and_preferred_slot() -> None:
     from edus.telegram_buttons import reply_keyboard, reservation_command
 
     assert reservation_command("14/08/2026", "07:00") == "reserva esta 14/08/2026 07:00"
+    assert reservation_command("Fecha20/08/2026", "Hora de Cita11:00 A.M.") == (
+        "reserva esta 20/08/2026 11:00"
+    )
     keyboard = reply_keyboard(
         [
             {"fecha": "14/08/2026", "hora": "07:00"},
@@ -139,6 +142,33 @@ def test_parse_fast_reserve_button_and_primero() -> None:
     assert picked is not None
     assert picked["hora"] == "09:00"
     assert not is_fast_reserve_message("hay cupos?")
+
+
+def test_monitor_pause_and_alert_dedupe(tmp_path: Path) -> None:
+    from edus.monitor_state import (
+        format_off_hours_heartbeat,
+        is_monitor_paused,
+        pause_monitor,
+        resume_monitor,
+        should_alert_slots,
+    )
+
+    pause_path = tmp_path / "paused.json"
+    alert_path = tmp_path / "alerted.txt"
+    slots = [{"fecha": "14/08/2026", "hora": "07:00"}]
+
+    assert not is_monitor_paused(pause_path)
+    assert should_alert_slots(slots, alert_path)
+    assert not should_alert_slots(slots, alert_path)
+
+    pause_monitor(specialty="Medicina General", slot=slots[0], path=pause_path)
+    assert is_monitor_paused(pause_path)
+    resume_monitor(pause_path)
+    assert not is_monitor_paused(pause_path)
+
+    heartbeat = format_off_hours_heartbeat("Medicina General")
+    assert "monitor activo" in heartbeat
+    assert "Sin cupos" in heartbeat
 
 
 def test_result_store_roundtrip(tmp_path: Path) -> None:

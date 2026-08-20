@@ -19,6 +19,7 @@ from edus.fast_book import (  # noqa: E402
     release_lock,
     run_book_cli,
 )
+from edus.monitor_state import pause_from_last_result  # noqa: E402
 from edus.telegram_buttons import send_telegram_message  # noqa: E402
 
 
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
             send_telegram_message(f"Reservando {target} ({specialty}). Voy directo a EDUS.")
         run_book_cli(specialty=specialty, fecha=fecha or None, hora=hora or None)
         send_telegram_message(format_book_reply(last_result()))
+        pause_from_last_result()
         return 0
     except Exception as exc:
         send_telegram_message(f"EDUS: fallo al reservar. {exc}")

@@ -37,9 +37,18 @@ Interpreta mensajes de Telegram:
 - "odontología" / "odonto" / "dental" → odontologia
 - "hay cupos?" / "revise" → check (sin reservar)
 - "último resultado" / "qué pasó" → last
-- "monitoreo" / "avísame si hay cupos" → explicar cron edus-cupos / hermes cron list
+- "monitoreo" / "avísame si hay cupos" / "el cronjob esta activo?" → SOLO ejecuta:
+  hermes cron list
+  hermes cron status
+  Responde breve: activo/pausado, next run, last run. NO uses Task Scheduler. NO inventes rutas .ps1. NO digas que reserva solo.
 - "ok, reservame el primero" / "ok, escogeme el de las HH:MM" / un **boton** "reserva esta DD/MM/YYYY HH:MM" → book ESA cita YA (después de una alerta de cupos). No preguntes. Ejecuta el CLI.
 - Si no dice especialidad, pregunta: ¿Medicina general o Odontología?
+
+IMPORTANTE cron edus-cupos:
+- Es Hermes cron --no-agent (script). SOLO lista cupos. NUNCA reserva sola.
+- NO existe %APPDATA%\\hermes\\cron\\edus-cupos.ps1 ni Win32_ScheduledJob edus-cupos.
+- Verificacion correcta: hermes cron list / hermes cron status
+- "provider timeout" en Telegram a menudo es el wrapper de Hermes; mira el last run del job.
 
 Flujo EDUS (obligatorio):
 1) Login + CAPTCHA OCR

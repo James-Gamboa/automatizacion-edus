@@ -7,6 +7,12 @@ import sys
 from typing import Any, Optional
 
 from edus.config import Settings, load_settings
+from edus.monitor_state import (
+    format_off_hours_heartbeat,
+    is_monitor_paused,
+    pause_monitor,
+    should_alert_slots,
+)
 from edus.result_store import RunResult
 from edus.time_rules import is_within_monitor_window
 from edus.workflow import check_and_book
@@ -92,15 +98,20 @@ async def run_watchdog(
 
     check_only=True: never auto-book; only Telegram a list when slots exist
     any_time=True: include slots whose hour is outside 05:00-08:00
-    force=True: still search outside the 5-8am monitor window (silent if no cupos)
+    force=True: still search outside the 5-8am monitor window (silent if no cupos inside window)
     """
     settings = settings or load_settings()
 
+    if is_monitor_paused():
+        return 0
+
+    in_monitor_window = is_within_monitor_window(
+        start_hour=settings.monitor_start_hour,
+        end_hour=settings.monitor_end_hour,
+    )
+
     if settings.enforce_monitor_window and not force:
-        if not is_within_monitor_window(
-            start_hour=settings.monitor_start_hour,
-            end_hour=settings.monitor_end_hour,
-        ):
+        if not in_monitor_window:
             return 0
 
     result: RunResult = await check_and_book(
@@ -112,6 +123,13 @@ async def run_watchdog(
     )
 
     if result.status in {"no_slots", "outside_monitor_window"}:
+        if result.status == "no_slots" and force and not in_monitor_window:
+            from edus.telegram_buttons import remove_keyboard_markup, send_telegram_message
+
+            send_telegram_message(
+                format_off_hours_heartbeat(result.specialty or specialty),
+                reply_markup=remove_keyboard_markup(),
+            )
         return 0
 
     text = format_telegram_result(result)
@@ -121,6 +139,8 @@ async def run_watchdog(
 
     slots = list(result.slots_found or []) + list(result.slots_out_of_window or [])
     if slots:
+        if not should_alert_slots(slots):
+            return 0
         from edus.telegram_buttons import send_cupos_alert
 
         if send_cupos_alert(text, slots):

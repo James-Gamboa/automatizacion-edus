@@ -6,13 +6,21 @@ Script-only cron (`--no-agent`). **Never reserves.** Telegram only gets a **list
 
 ```
 Hermes cron every 5 min (no LLM)
-    05:00–07:59 CR -> search EDUS
-    other hours    -> search at most every 20 min (skip the other ticks, silent)
-    -> no cupos -> silent (no Telegram)
+    05:00–07:59 CR -> search every 5 min
+        -> cupos nuevos -> Telegram (una vez por lista; no repite la misma)
+        -> sin cupos -> silencio
+        -> ya reservaste cita -> monitor pausado (silencio total)
+    other hours    -> search + heartbeat cada ~20 min ("monitor activo, sin cupos")
     -> hay cupos (even if hora is after 08:00) -> Telegram list
 ```
 
-You book later yourself if you want that slot.
+You book later yourself if you want that slot. After a successful **book** (medicina u odontologia), alerts stop automatically.
+
+To search again later:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\edus_cli.py monitor --resume
+```
 
 To search every 10 minutes outside 5–8 instead of 20, set `EDUS_OFF_HOURS_EVERY_MIN=10` on the Hermes job environment.
 
